@@ -1,25 +1,12 @@
-# .NET Interactive and Polyglot Notebooks
+# Polyglossy Interactive and Polyglossy Notebooks
 
-## 🚨Polyglot Notebooks will be deprecated March 27th, 2026
+## 🚨 Polyglot Notebooks are back with a new name and a new team behind it! 🚨
 
-## 🚨.NET Interactive will be deprecated April 24th, 2026
+> !Important: This is not a Microsoft / Dotnet project anymore. Any references to the original names will be updated in the close future before anything is shipped.
 
-## This repository will be archived on April 24th, 2026
+## What is Polyglot Interactive? (formarly .NET Interactive)
 
-### For more information on Polyglot Notebooks and .NET Interactive, please read the [announcement](https://github.com/dotnet/interactive/issues/4163)
-
-## **The following paths are no longer supported.**
-
-- src/polyglot-notebooks
-- src/polyglot-notebooks-browser
-- src/polyglot-notebooks-ui-components
-- src/polyglot-notebooks-vscode
-- src/polyglot-notebooks-vscode-common
-- src/polyglot-notebooks-vscode-insiders
-
-## What is .NET Interactive?
-
-.NET Interactive is an engine and API for running and editing code interactively, including:
+Polyglot Interactive is an engine and API for running and editing code interactively, including:
 
 * Running code and getting its results.
 * Evaluating code to provide language services such as completions and diagnostics.
@@ -45,11 +32,11 @@ The following languages are supported by .NET Interactive:
 
 ### REPLs
 
-.NET Interactive can be used as the execution engine for REPLs as well. The experimental [.NET REPL](https://github.com/jonsequitur/dotnet-repl) is one example of a command line REPL built on .NET Interactive. In addition, .NET REPL can be used for automated command line execution of notebooks.
+Polyglot Interactive can be used as the execution engine for REPLs as well. The experimental [.NET REPL](https://github.com/jonsequitur/dotnet-repl) is one example of a command line REPL built on Polyglot Interactive. In addition, .NET REPL can be used for automated command line execution of notebooks.
 
 ### Small factor devices
 
-.NET Interactive supports running on devices like Raspberry Pi and [pi-top [4]](https://github.com/pi-top/pi-top-4-.NET-Core-API). You can find instructions [here](docs/small-factor-devices.md).
+Polyglot Interactive supports running on devices like Raspberry Pi and [pi-top [4]](https://github.com/pi-top/pi-top-4-.NET-Core-API). You can find instructions [here](docs/small-factor-devices.md).
 
 ## FAQ
 
@@ -57,7 +44,7 @@ For more information, please refer to our [FAQ](./docs/FAQ.md).
 
 ## Acknowledgements 
 
-The multi-language experience of .NET Interactive is truly a collaborative effort among different teams at Microsoft and in the community. We'd like to thank the following teams for contributing their time and expertise to helping bring support for other languages:
+The multi-language experience of Polyglot Interactive is truly a collaborative effort among different teams at Microsoft and in the community. We'd like to thank the following teams for contributing their time and expertise to helping bring support for other languages:
 
 - **PowerShell Team:** PowerShell support
 - **Azure Data Team:** SQL and KQL support
@@ -73,11 +60,11 @@ Telemetry is collected when the `dotnet-interactive` tool is started. (If you ar
 
 ### How to opt out
 
-The .NET Interactive telemetry feature is enabled by default. To opt out of the telemetry feature, set the `DOTNET_INTERACTIVE_CLI_TELEMETRY_OPTOUT` environment variable to `1` or `true`.
+The Polyglot Interactive telemetry feature is enabled by default. To opt out of the telemetry feature, set the `DOTNET_INTERACTIVE_CLI_TELEMETRY_OPTOUT` environment variable to `1` or `true`.
 
 ### Disclosure
 
-The .NET Interactive tool displays text similar to the following when you first run one of the .NET Interactive CLI commands (for example, `dotnet interactive jupyter install`). Text may vary slightly depending on the version of the tool you're running. This "first run" experience is how Microsoft notifies you about data collection.
+The Polyglot Interactive tool displays text similar to the following when you first run one of the .NET Interactive CLI commands (for example, `dotnet interactive jupyter install`). Text may vary slightly depending on the version of the tool you're running. This "first run" experience is how Microsoft notifies you about data collection.
 
 ```console
 Telemetry
