@@ -7,6 +7,8 @@ on:
       - 'feature/**'
       - 'hotfix/**'
       - 'release/**'
+    # NOTE: paths-ignore is duplicated under push and pull_request because
+    # GitHub Actions does not support YAML anchors. Keep both lists in sync.
     paths-ignore:
       - '**/*.md'
       - '.config/**'
@@ -37,15 +39,25 @@ on:
       - '.gitignore'
       - '*.txt'
       - '*.github-issues'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
-  checks: write   # required by dorny/test-reporter
+
+env:
+  NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
 jobs:
   build-windows:
     runs-on: windows-2022
     timeout-minutes: 200
+    permissions:
+      contents: read
+      checks: write   # required by dorny/test-reporter (inside composite action)
     steps:
       # core.symlinks must be configured before checkout so git materialises
       # symlinks as real reparse points on Windows.  ensure-symlinks.ps1 also
@@ -73,6 +85,9 @@ jobs:
   build-linux:
     runs-on: ubuntu-22.04
     timeout-minutes: 200
+    permissions:
+      contents: read
+      checks: write   # required by dorny/test-reporter (inside composite action)
     steps:
       - uses: actions/checkout@v6
 

@@ -9,8 +9,11 @@ inputs:
     default: Release
     description: 'Build configuration (Release or Debug)'
   node-version:
-    default: '22.18.0'
+    default: '22.22.3'
     description: 'Node.js version to use'
+  npm-version:
+    default: '11.14.1'
+    description: 'npm CLI version to install globally'
 
 runs:
   using: composite
@@ -49,7 +52,7 @@ runs:
     - name: Upgrade npm (Windows)
       if: inputs.platform == 'windows'
       shell: pwsh
-      run: npm install -g npm@11.6.0
+      run: npm install -g npm@${{ inputs.npm-version }}
       env:
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
@@ -96,7 +99,7 @@ runs:
     - name: Upgrade npm (Linux)
       if: inputs.platform == 'linux'
       shell: bash
-      run: npm install -g npm@11.6.0
+      run: npm install -g npm@${{ inputs.npm-version }}
       env:
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 

@@ -11,8 +11,16 @@ on:
         type: boolean
         default: true
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a publish mid-flight
+
 permissions:
   contents: read
+
+env:
+  NODE_VERSION: '22.22.3'
+  NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
 jobs:
   # ──────────────────────────────────────────────────────────
@@ -73,8 +81,6 @@ jobs:
             -stableToolVersionNumber '${{ steps.version.outputs.version }}' `
             -outDir '${{ runner.temp }}\staging\vscode'
         working-directory: src
-        env:
-          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
       - name: Pack NPM package
         shell: pwsh
@@ -83,8 +89,6 @@ jobs:
             -packageVersionNumber '${{ steps.version.outputs.version }}' `
             -outDir '${{ runner.temp }}\staging\npm'
         working-directory: src/polyglot-notebooks
-        env:
-          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
       - uses: actions/upload-artifact@v7
         with:
@@ -119,7 +123,8 @@ jobs:
   # ──────────────────────────────────────────────────────────
   publish-nuget:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
     environment: production
     steps:
       - uses: actions/download-artifact@v8
@@ -135,11 +140,13 @@ jobs:
           find packages -name '*.nupkg' ! -name '*.symbols.nupkg' | while read pkg; do
             dotnet nuget push "$pkg" \
               --source https://api.nuget.org/v3/index.json \
-              --api-key ${{ secrets.NUGET_API_KEY }} \
+              --api-key "$NUGET_API_KEY" \
               --skip-duplicate \
               --no-symbols
           done
         shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
       - name: Simulate NuGet push
         if: ${{ inputs.simulate }}
@@ -153,7 +160,8 @@ jobs:
   # ──────────────────────────────────────────────────────────
   publish-npm:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
     environment: production
     steps:
       - uses: actions/download-artifact@v8
@@ -163,7 +171,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22.18.0'
+          node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish to npmjs.org
@@ -186,6 +194,7 @@ jobs:
   publish-vscode:
     needs: [build, publish-nuget]
     runs-on: windows-2022
+    timeout-minutes: 60
     environment: production
     permissions:
       id-token: write
@@ -199,7 +208,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '22.18.0'
+          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/download-artifact@v8
         with:
@@ -240,7 +249,7 @@ jobs:
         run: |
           .\eng\publish\PublishStablePolyglotsNotebooks.ps1 `
             -artifactsPath '${{ runner.temp }}\artifacts' `
-            -nugetToken '${{ secrets.NUGET_API_KEY }}' `
+            -nugetToken $env:NUGET_API_KEY `
             -isSimulated '${{ inputs.simulate }}'
         env:
-          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

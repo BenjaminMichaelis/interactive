@@ -12,3 +12,21 @@ updates:
           - '*'
     labels:
       - dependencies
+
+  # Keep npm packages up to date
+  - package-ecosystem: npm
+    directory: /src
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+
+  # Keep NuGet packages up to date
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
