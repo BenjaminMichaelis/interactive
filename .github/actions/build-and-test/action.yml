@@ -31,7 +31,9 @@ runs:
     - name: Cache NuGet packages
       uses: actions/cache@v5
       with:
-        path: ~/.nuget/packages
+        # Arcade's tools.ps1/tools.sh sets NUGET_PACKAGES to {repo}/.packages when
+        # running with -ci (i.e. useGlobalNuGetCache=false), not ~/.nuget/packages.
+        path: ${{ github.workspace }}/.packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', 'global.json', 'Directory.Packages.props') }}
         restore-keys: ${{ runner.os }}-nuget-
 
@@ -106,7 +108,14 @@ runs:
     - name: Copy Arcade resources (Linux)
       if: inputs.platform == 'linux'
       shell: bash
-      run: mkdir -p artifacts && cp -r eng/resources/* artifacts/ 2>/dev/null || true
+      run: |
+        if [[ ! -d eng/resources ]]; then
+          echo "eng/resources directory not found" >&2; exit 1
+        fi
+        mkdir -p artifacts
+        # Allow the glob to silently expand to nothing (empty directory), but not directory-missing
+        shopt -s nullglob
+        cp -r eng/resources/* artifacts/
 
     - name: Build (Linux)
       if: inputs.platform == 'linux'
@@ -120,6 +129,8 @@ runs:
 
     - name: Run tests (Linux)
       if: inputs.platform == 'linux'
+      # pwsh is pre-installed on ubuntu-22.04 (the only Linux runner this action
+      # targets). If the runner image changes, ensure pwsh is available first.
       shell: pwsh
       run: ./test-retry-runner.ps1 -buildConfig ${{ inputs.build-config }}
       env:

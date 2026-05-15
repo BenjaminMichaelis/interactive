@@ -10,6 +10,8 @@ on:
         description: 'Dry run — do not actually publish'
         type: boolean
         default: true
+        # NOTE: on tag push (no workflow_dispatch), inputs.simulate is the empty
+        # string, which is falsy — the real publish path runs. This is intentional.
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -138,7 +140,10 @@ jobs:
       - name: Push NuGet packages
         if: ${{ !inputs.simulate }}
         run: |
-          find packages -name '*.nupkg' ! -name '*.symbols.nupkg' | while read pkg; do
+          set -eo pipefail
+          # Use a for-loop (not 'find | while') so exit codes from dotnet nuget push
+          # propagate correctly and a push failure fails the step immediately.
+          for pkg in $(find packages -name '*.nupkg' ! -name '*.symbols.nupkg'); do
             dotnet nuget push "$pkg" \
               --source https://api.nuget.org/v3/index.json \
               --api-key "$NUGET_API_KEY" \
@@ -177,7 +182,13 @@ jobs:
 
       - name: Publish to npmjs.org
         if: ${{ !inputs.simulate }}
-        run: npm publish npm/microsoft-polyglot-notebooks-*.tgz --access public
+        run: |
+          set -eo pipefail
+          tarballs=( npm/microsoft-polyglot-notebooks-*.tgz )
+          if [[ ${#tarballs[@]} -ne 1 || ! -f "${tarballs[0]}" ]]; then
+            echo "Expected exactly one NPM tarball, found: ${tarballs[*]}" >&2; exit 1
+          fi
+          npm publish "${tarballs[0]}" --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

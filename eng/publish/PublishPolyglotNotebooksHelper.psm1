@@ -59,9 +59,16 @@ function PublishInsidersExtension {
     # Opened https://github.com/microsoft/vscode-vsce/issues/1192 to track this.
     if ($output -match 'Signature verification result: Success') {
         Write-Host "Signature verification succeeded for $extension"
-    } else {
+    } elseif ($simulate) {
+        # Test-signed builds (SignType=Test) are expected to fail signature verification.
+        # Soft-fail is acceptable only in simulate/test-sign mode.
         Write-Host $output
         Write-Host "##[warning]Signature verification did not succeed for $extension (expected for test-signed builds)"
+    } else {
+        # Production publish: fail closed to prevent shipping a tampered or unsigned extension.
+        Write-Host $output
+        Write-Error "Signature verification failed for $extension. Aborting production publish."
+        exit 1
     }
 
     Write-Host "Publishing extension $extension to VS Code Marketplace using Managed Identity..."
