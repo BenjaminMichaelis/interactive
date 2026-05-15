@@ -31,8 +31,7 @@ runs:
     - name: Cache NuGet packages
       uses: actions/cache@v5
       with:
-        # Arcade's tools.ps1/tools.sh sets NUGET_PACKAGES to {repo}/.packages when
-        # running with -ci (i.e. useGlobalNuGetCache=false), not ~/.nuget/packages.
+        # CI scripts use a repo-local NuGet cache to keep restore inputs deterministic.
         path: ${{ github.workspace }}/.packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', 'global.json', 'Directory.Packages.props') }}
         restore-keys: ${{ runner.os }}-nuget-
@@ -75,6 +74,7 @@ runs:
         DOTNET_INTERACTIVE_FRONTEND_NAME: CI
         DOTNET_INTERACTIVE_SIGN_TYPE: Test
         BUILD_BUILDNUMBER: ${{ github.run_number }}
+        NUGET_PACKAGES: ${{ github.workspace }}\.packages
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
     - name: Run tests (Windows)
@@ -113,9 +113,14 @@ runs:
           echo "eng/resources directory not found" >&2; exit 1
         fi
         mkdir -p artifacts
-        # Allow the glob to silently expand to nothing (empty directory), but not directory-missing
+        # Allow empty resources directory, but fail if the directory itself is missing.
         shopt -s nullglob
-        cp -r eng/resources/* artifacts/
+        resources=(eng/resources/*)
+        if (( ${#resources[@]} > 0 )); then
+          cp -r "${resources[@]}" artifacts/
+        else
+          echo "eng/resources is empty; nothing to copy."
+        fi
 
     - name: Build (Linux)
       if: inputs.platform == 'linux'
@@ -125,12 +130,20 @@ runs:
         DOTNET_INTERACTIVE_FRONTEND_NAME: CI
         DOTNET_INTERACTIVE_SIGN_TYPE: Test
         BUILD_BUILDNUMBER: ${{ github.run_number }}
+        NUGET_PACKAGES: ${{ github.workspace }}/.packages
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
+    - name: Verify PowerShell availability (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        if ! command -v pwsh >/dev/null 2>&1; then
+          echo "pwsh is required to run test-retry-runner.ps1 on Linux runners." >&2
+          exit 1
+        fi
 
     - name: Run tests (Linux)
       if: inputs.platform == 'linux'
-      # pwsh is pre-installed on ubuntu-22.04 (the only Linux runner this action
-      # targets). If the runner image changes, ensure pwsh is available first.
       shell: pwsh
       run: ./test-retry-runner.ps1 -buildConfig ${{ inputs.build-config }}
       env:
