@@ -15,8 +15,8 @@
   <!--
   When Arcade is disabled (DisableArcade=1) the Sdk.props/Sdk.targets that normally set
   ArtifactsDir and OutputPath are not imported.  Replicate the same layout here so that
-  'dotnet build' with DisableArcade=1 writes binaries to the same artifacts/bin/… tree
-  that 'dotnet test --no-build' (which evaluates without DisableArcade=1 and thus does
+  'dotnet build' with DisableArcade=1 writes binaries to the same artifacts/bin/... tree
+  that 'dotnet test' with no-build (which evaluates without DisableArcade=1 and thus does
   import Arcade) expects to find them in.
   -->
   <PropertyGroup Condition="'$(DisableArcade)' == '1'">
