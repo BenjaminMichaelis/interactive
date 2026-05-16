@@ -15,7 +15,12 @@ updates:
 
   # Keep npm packages up to date
   - package-ecosystem: npm
-    directory: /src
+    directories:
+      - /src/polyglot-notebooks
+      - /src/polyglot-notebooks-ui-components
+      - /src/polyglot-notebooks-vscode
+      - /src/polyglot-notebooks-vscode-insiders
+      - /src/polyglot-notebooks-browser
     schedule:
       interval: weekly
       day: monday

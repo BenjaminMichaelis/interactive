@@ -93,7 +93,7 @@ jobs:
         shell: pwsh
         run: |
           $pkg = Get-ChildItem artifacts/packages/Release/Shipping/Microsoft.dotnet-interactive.*.nupkg |
-                 Where-Object { $_.Name -notmatch 'symbols' } |
+                 Where-Object { $_.Name -notmatch '\.symbols\.nupkg$' } |
                  Select-Object -First 1
           if (-not $pkg) { Write-Error "No Microsoft.dotnet-interactive.*.nupkg found"; exit 1 }
           $ver = $pkg.BaseName -replace '^Microsoft\.dotnet-interactive\.'
@@ -114,6 +114,9 @@ jobs:
 
       - name: Pack VSCode extensions
         shell: pwsh
+        # working-directory is load-bearing: PackVSCodeExtension.ps1 receives
+        # relative package directory names (e.g. "polyglot-notebooks-vscode") and
+        # calls Push-Location on them, so they must resolve under src/.
         run: |
           ${{ github.workspace }}\eng\package\PackVSCodeExtension.ps1 `
             -stableToolVersionNumber '${{ steps.version.outputs.version }}' `
@@ -122,6 +125,8 @@ jobs:
 
       - name: Pack NPM package
         shell: pwsh
+        # working-directory is load-bearing: PackNpmPackage.ps1 uses Get-Location
+        # (the current directory) as the directory in which `npm pack` runs.
         run: |
           ${{ github.workspace }}\eng\package\PackNpmPackage.ps1 `
             -packageVersionNumber '${{ steps.version.outputs.version }}' `
@@ -171,6 +176,8 @@ jobs:
           path: packages
 
       - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
 
       - name: Push NuGet packages
         if: needs.prepare.outputs.simulate != 'true'
@@ -275,12 +282,34 @@ jobs:
           name: packages
           path: '${{ runner.temp }}\artifacts\packages\Shipping'
 
-      # Give nuget.org time to index the freshly-pushed packages so that
-      # VerifyVSCodeExtension.ps1's live query can find them.
+      # Poll nuget.org until the expected version is indexed (up to 15 minutes),
+      # then VerifyVSCodeExtension.ps1's live query can find the package.
+      # A fixed sleep is unreliable: indexing can take seconds or >15 min.
       - name: Wait for nuget.org propagation
         if: needs.prepare.outputs.simulate != 'true'
         shell: pwsh
-        run: Start-Sleep -Seconds 180
+        run: |
+          $version = '${{ needs.build.outputs.version }}'
+          $packageId = 'Microsoft.dotnet-interactive'
+          $url = "https://api.nuget.org/v3-flatcontainer/$($packageId.ToLower())/index.json"
+          $timeout = [DateTimeOffset]::UtcNow.AddMinutes(15)
+          do {
+            Start-Sleep -Seconds 10
+            try {
+              $index = (Invoke-RestMethod -Uri $url).versions
+              if ($index -contains $version) {
+                Write-Host "Version $version is indexed on nuget.org"
+                break
+              }
+              Write-Host "Waiting for version $version to appear on nuget.org..."
+            } catch {
+              Write-Host "Failed to query nuget.org: $_"
+            }
+          } while ([DateTimeOffset]::UtcNow -lt $timeout)
+          if ([DateTimeOffset]::UtcNow -ge $timeout) {
+            Write-Error "Timed out waiting for version $version to appear on nuget.org"
+            exit 1
+          }
 
       - name: Login to Azure (OIDC)
         if: needs.prepare.outputs.simulate != 'true'
@@ -294,9 +323,11 @@ jobs:
         run: npm install -g @vscode/vsce
         shell: pwsh
 
-      # PublishStablePolyglotsNotebooks.ps1 calls PublishInsidersExtension first
-      # then PublishStableExtensionAndNuGetPackages — so insiders is always
-      # published before stable in the correct order.
+      # Note: PublishStablePolyglotsNotebooks.ps1 → PublishStableExtensionAndNuGetPackages
+      # also pushes these .nupkg files to nuget.org (with --skip-duplicate).
+      # The publish-nuget job above performs the primary OIDC-authenticated push;
+      # the re-push here is harmless but intentional so the PS script remains the
+      # single source of truth for the full publish sequence.
       - name: Publish VSCode extensions (insiders then stable)
         shell: pwsh
         run: |
