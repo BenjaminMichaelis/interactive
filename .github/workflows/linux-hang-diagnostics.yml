@@ -1,0 +1,56 @@
+name: Linux Hang Diagnostics (Temporary)
+
+on:
+  workflow_dispatch:
+    inputs:
+      hang-timeout:
+        description: 'blame-hang timeout (e.g. 5m, 10m)'
+        required: false
+        default: '5m'
+      config:
+        description: 'Build configuration'
+        required: false
+        default: 'Release'
+
+permissions:
+  contents: read
+
+jobs:
+  jupyter-hang-diagnostics:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.packages
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Create diagnostics directory
+        shell: bash
+        run: mkdir -p artifacts/TestResults/${{ inputs.config }}
+
+      - name: Run Jupyter test diagnostics
+        shell: bash
+        run: |
+          set -eo pipefail
+          dotnet test src/Microsoft.DotNet.Interactive.Jupyter.Tests/Microsoft.DotNet.Interactive.Jupyter.Tests.csproj \
+            -c "${{ inputs.config }}" \
+            --blame-hang \
+            --blame-hang-timeout "${{ inputs.hang-timeout }}" \
+            --blame-hang-dump-type full \
+            --blame-crash \
+            --diag "artifacts/TestResults/${{ inputs.config }}/jupyter-diag.log" \
+            --logger "trx;LogFileName=jupyter.trx" \
+            --results-directory "artifacts/TestResults/${{ inputs.config }}"
+
+      - name: Upload diagnostics artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-jupyter-hang-diagnostics
+          path: artifacts/TestResults/${{ inputs.config }}
+          retention-days: 14
