@@ -42,12 +42,24 @@ jobs:
         shell: bash
         run: mkdir -p "artifacts/TestResults/$DIAG_CONFIG"
 
+      - name: Build prerequisites for diagnostics
+        shell: bash
+        run: ./eng/cibuild.sh --configuration "$DIAG_CONFIG" /p:SignType=Test
+        env:
+          DOTNET_INTERACTIVE_FRONTEND_NAME: CI
+          DOTNET_INTERACTIVE_SIGN_TYPE: Test
+          BUILD_BUILDNUMBER: ${{ github.run_number }}
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
       - name: Run Jupyter test diagnostics
+        continue-on-error: true
         shell: bash
         run: |
           set -eo pipefail
           dotnet test src/Microsoft.DotNet.Interactive.Jupyter.Tests/Microsoft.DotNet.Interactive.Jupyter.Tests.csproj \
             -c "$DIAG_CONFIG" \
+            --no-restore \
+            --no-build \
             --blame-hang \
             --blame-hang-timeout "$DIAG_HANG_TIMEOUT" \
             --blame-hang-dump-type full \
