@@ -21,7 +21,15 @@ else
 }
 
 function ExecuteTestDirectory([string]$testDirectory, [string]$extraArgs = "") {
-    $testCommand = "dotnet test $testDirectory/ $extraArgs -l trx --no-restore --no-build --blame-hang-timeout 10m --blame-hang-dump-type full --blame-crash -c $buildConfig --results-directory $repoRoot/artifacts/TestResults/$buildConfig"
+    $projectName = [System.IO.Path]::GetFileName($testDirectory.TrimEnd('/', '\'))
+    $blameArgs = "--blame-hang-timeout 10m --blame-hang-dump-type full --blame-crash"
+
+    if (-not $IsWindows -and $projectName -eq "Microsoft.DotNet.Interactive.Jupyter.Tests") {
+        Write-Host "Running $projectName without blame-hang collection on non-Windows to avoid false-positive hang aborts."
+        $blameArgs = ""
+    }
+
+    $testCommand = "dotnet test $testDirectory/ $extraArgs -l trx --no-restore --no-build $blameArgs -c $buildConfig --results-directory $repoRoot/artifacts/TestResults/$buildConfig"
     Write-Host "Executing $testCommand"
     Invoke-Expression $testCommand
 }
