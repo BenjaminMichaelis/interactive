@@ -51,9 +51,6 @@ done
 
 export NUGET_PACKAGES="$repo_root/.packages"
 export DisableArcade=1
-if [[ -n "${GITHUB_ENV:-}" ]]; then
-  echo "DisableArcade=1" >> "$GITHUB_ENV"
-fi
 
 "$scriptroot/build.sh" --ci --no-dotnet
 

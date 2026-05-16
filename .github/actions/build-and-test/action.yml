@@ -88,6 +88,7 @@ runs:
       env:
         DOTNET_INTERACTIVE_FRONTEND_NAME: CI
         DOTNET_INTERACTIVE_SIGN_TYPE: Test
+        DisableArcade: '1'
 
     - name: Report test results (Windows)
       # Fork PRs get a read-only GITHUB_TOKEN regardless of permissions declarations,
@@ -153,6 +154,7 @@ runs:
       env:
         DOTNET_INTERACTIVE_FRONTEND_NAME: CI
         DOTNET_INTERACTIVE_SIGN_TYPE: Test
+        DisableArcade: '1'
 
     - name: Report test results (Linux)
       if: ${{ inputs.platform == 'linux' && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
