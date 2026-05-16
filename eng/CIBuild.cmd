@@ -48,6 +48,7 @@ goto parse_args
 :parsed_args
 set "NUGET_PACKAGES=%REPO_ROOT%\.packages"
 set "DisableArcade=1"
+if defined GITHUB_ENV echo DisableArcade=1>> "%GITHUB_ENV%"
 
 powershell -noprofile -executionPolicy RemoteSigned -file "%SCRIPT_ROOT%build.ps1" -ci -noDotnet
 if errorlevel 1 exit /b %ERRORLEVEL%
