@@ -150,6 +150,25 @@ runs:
         DOTNET_INTERACTIVE_FRONTEND_NAME: CI
         DOTNET_INTERACTIVE_SIGN_TYPE: Test
 
+    - name: Collect Jupyter hang diagnostics (Linux, temporary)
+      if: ${{ inputs.platform == 'linux' && failure() }}
+      continue-on-error: true
+      shell: bash
+      run: |
+        set -eo pipefail
+        mkdir -p "artifacts/TestResults/${{ inputs.build-config }}/diagnostics-jupyter"
+        dotnet test src/Microsoft.DotNet.Interactive.Jupyter.Tests/Microsoft.DotNet.Interactive.Jupyter.Tests.csproj \
+          -c "${{ inputs.build-config }}" \
+          --no-restore \
+          --no-build \
+          --blame-hang \
+          --blame-hang-timeout 5m \
+          --blame-hang-dump-type full \
+          --blame-crash \
+          --diag "artifacts/TestResults/${{ inputs.build-config }}/diagnostics-jupyter/jupyter-diag.log" \
+          --logger "trx;LogFileName=jupyter-diagnostics.trx" \
+          --results-directory "artifacts/TestResults/${{ inputs.build-config }}/diagnostics-jupyter"
+
     - name: Report test results (Linux)
       if: ${{ inputs.platform == 'linux' && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
       uses: dorny/test-reporter@v3
