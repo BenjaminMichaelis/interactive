@@ -1,6 +1,13 @@
 name: Linux Hang Diagnostics (Temporary)
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/linux-hang-diagnostics.yml'
+      - 'test-retry-runner.ps1'
+      - 'src/Microsoft.DotNet.Interactive.Jupyter.Tests/**'
   workflow_dispatch:
     inputs:
       hang-timeout:
@@ -21,6 +28,8 @@ jobs:
     timeout-minutes: 120
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.packages
+      DIAG_CONFIG: ${{ inputs.config || 'Release' }}
+      DIAG_HANG_TIMEOUT: ${{ inputs['hang-timeout'] || '5m' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -31,26 +40,26 @@ jobs:
 
       - name: Create diagnostics directory
         shell: bash
-        run: mkdir -p artifacts/TestResults/${{ inputs.config }}
+        run: mkdir -p "artifacts/TestResults/$DIAG_CONFIG"
 
       - name: Run Jupyter test diagnostics
         shell: bash
         run: |
           set -eo pipefail
           dotnet test src/Microsoft.DotNet.Interactive.Jupyter.Tests/Microsoft.DotNet.Interactive.Jupyter.Tests.csproj \
-            -c "${{ inputs.config }}" \
+            -c "$DIAG_CONFIG" \
             --blame-hang \
-            --blame-hang-timeout "${{ inputs.hang-timeout }}" \
+            --blame-hang-timeout "$DIAG_HANG_TIMEOUT" \
             --blame-hang-dump-type full \
             --blame-crash \
-            --diag "artifacts/TestResults/${{ inputs.config }}/jupyter-diag.log" \
+            --diag "artifacts/TestResults/$DIAG_CONFIG/jupyter-diag.log" \
             --logger "trx;LogFileName=jupyter.trx" \
-            --results-directory "artifacts/TestResults/${{ inputs.config }}"
+            --results-directory "artifacts/TestResults/$DIAG_CONFIG"
 
       - name: Upload diagnostics artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: linux-jupyter-hang-diagnostics
-          path: artifacts/TestResults/${{ inputs.config }}
+          path: artifacts/TestResults/${{ env.DIAG_CONFIG }}
           retention-days: 14
