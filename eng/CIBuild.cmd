@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
 for %%I in ("%~dp0.") do set "SCRIPT_ROOT=%%~fI\"
 
 if /I not "%GITHUB_ACTIONS%"=="true" (
@@ -53,16 +53,18 @@ if /I "%~1"=="/p:SignType" (
   shift
   goto parse_args
 )
-if /I "!ARG:~0,12!"=="/p:SignType=" (
-  set "SIGN_TYPE=!ARG:~12!"
+set "ARG_PREFIX=%ARG:~0,12%"
+if /I "%ARG_PREFIX%"=="/p:SignType=" (
+  set "SIGN_TYPE=%ARG:~12%"
   shift
   goto parse_args
 )
-set "FORWARDED_ARG=%1"
+rem Forwarded CI args are expected to be MSBuild-style tokens without embedded quotes.
+set "FORWARDED_ARG="%~1""
 if defined FORWARDED_ARGS (
-  set "FORWARDED_ARGS=!FORWARDED_ARGS! !FORWARDED_ARG!"
+  set "FORWARDED_ARGS=%FORWARDED_ARGS% %FORWARDED_ARG%"
 ) else (
-  set "FORWARDED_ARGS=!FORWARDED_ARG!"
+  set "FORWARDED_ARGS=%FORWARDED_ARG%"
 )
 shift
 goto parse_args
@@ -76,8 +78,8 @@ if errorlevel 1 exit /b %ERRORLEVEL%
 
 set "PACKAGE_VERSION="
 if defined GITHUB_REF (
-  if /I "!GITHUB_REF:~0,11!"=="refs/tags/v" (
-    set "PACKAGE_VERSION=!GITHUB_REF:~11!"
+  if /I "%GITHUB_REF:~0,11%"=="refs/tags/v" (
+    set "PACKAGE_VERSION=%GITHUB_REF:~11%"
   )
 )
 if not defined PACKAGE_VERSION if defined OfficialBuildId set "PACKAGE_VERSION=1.0.0-ci.%OfficialBuildId%"

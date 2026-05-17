@@ -37,12 +37,17 @@ jobs:
         id: flags
         shell: bash
         run: |
-          # workflow_dispatch sets inputs.simulate explicitly;
-          # tag-push leaves it empty -- treat that as false (real publish).
-          if [[ "${{ inputs.simulate }}" == "true" ]]; then
-            simulate=true
-          else
+          if [[ "${{ github.event_name }}" == "push" ]]; then
             simulate=false
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ inputs.simulate }}" == "true" ]]; then
+              simulate=true
+            else
+              simulate=false
+            fi
+          else
+            echo "Unsupported event '${{ github.event_name }}'" >&2
+            exit 1
           fi
           echo "simulate=$simulate" >> "$GITHUB_OUTPUT"
           echo "Resolved simulate=$simulate"
@@ -67,7 +72,7 @@ jobs:
           git config --global core.longpaths true
         shell: pwsh
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       # For publish builds, OfficialBuildId drives Arcade's deterministic versioning
       - name: Compute OfficialBuildId
@@ -92,11 +97,23 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $pkg = Get-ChildItem artifacts/packages/Release/Shipping/Microsoft.dotnet-interactive.*.nupkg |
-                 Where-Object { $_.Name -notmatch '\.symbols\.nupkg$' } |
-                 Select-Object -First 1
-          if (-not $pkg) { Write-Error "No Microsoft.dotnet-interactive.*.nupkg found"; exit 1 }
-          $ver = $pkg.BaseName -replace '^Microsoft\.dotnet-interactive\.'
+          $packagePattern = '^Microsoft\.dotnet-interactive\.(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\.nupkg$'
+          $packages = @(Get-ChildItem artifacts\packages\Release\Shipping\Microsoft.dotnet-interactive.*.nupkg -File -ErrorAction SilentlyContinue |
+                       Where-Object { $_.Name -match $packagePattern })
+          if ($packages.Count -eq 0) {
+            Write-Error "No bare Microsoft.dotnet-interactive package with a SemVer filename found"
+            exit 1
+          }
+          if ($packages.Count -gt 1) {
+            Write-Error "Multiple bare Microsoft.dotnet-interactive packages found: $($packages.Name -join ', ')"
+            exit 1
+          }
+          $match = [regex]::Match($packages[0].Name, $packagePattern)
+          if (-not $match.Success) {
+            Write-Error "Package filename '$($packages[0].Name)' did not match expected SemVer pattern"
+            exit 1
+          }
+          $ver = $match.Groups['version'].Value
           Write-Host "Detected version: $ver"
           echo "version=$ver" >> $env:GITHUB_OUTPUT
 
@@ -133,26 +150,26 @@ jobs:
             -outDir '${{ runner.temp }}\staging\npm'
         working-directory: src/polyglot-notebooks
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: packages
           path: artifacts/packages/Release/Shipping
           retention-days: 30
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: vscode
           path: '${{ runner.temp }}\staging\vscode'
           retention-days: 30
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: npm
           path: '${{ runner.temp }}\staging\npm'
           retention-days: 30
 
       - name: Upload test results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: publish-build-test-results
@@ -170,12 +187,12 @@ jobs:
     timeout-minutes: 30
     environment: production
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           name: packages
           path: packages
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
 
@@ -212,12 +229,12 @@ jobs:
     timeout-minutes: 15
     environment: production
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           name: npm
           path: npm
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
@@ -260,17 +277,17 @@ jobs:
           git config --global core.longpaths true
         shell: pwsh
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           name: vscode
           # PackVSCodeExtension.ps1 writes stable/, stable-locked/, and insiders/
@@ -280,7 +297,7 @@ jobs:
 
       # PublishStableExtensionAndNuGetPackages scans this path for .nupkg files.
       # NuGet was already pushed by publish-nuget; --skip-duplicate makes re-push safe.
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           name: packages
           path: '${{ runner.temp }}\artifacts\packages\Shipping'
