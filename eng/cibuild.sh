@@ -90,5 +90,7 @@ dotnet build "$repo_root/dotnet-interactive.sln" \
 
 dotnet pack "$repo_root/dotnet-interactive.sln" \
   -c "$configuration" \
+  --no-build \
+  --no-restore \
   "${common_props[@]}" \
   "${forwarded_args[@]}"

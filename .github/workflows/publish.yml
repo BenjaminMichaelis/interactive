@@ -183,9 +183,9 @@ jobs:
         if: needs.prepare.outputs.simulate != 'true'
         run: |
           set -eo pipefail
-          # Use a for-loop (not 'find | while') so exit codes from dotnet nuget push
-          # propagate correctly and a push failure fails the step immediately.
-          for pkg in $(find packages -name '*.nupkg' ! -name '*.symbols.nupkg'); do
+          shopt -s globstar nullglob
+          for pkg in packages/**/*.nupkg; do
+            [[ "$pkg" == *.symbols.nupkg ]] && continue
             dotnet nuget push "$pkg" \
               --source https://api.nuget.org/v3/index.json \
               --api-key "$NUGET_API_KEY" \
@@ -273,6 +273,9 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: vscode
+          # PackVSCodeExtension.ps1 writes stable/, stable-locked/, and insiders/
+          # under the uploaded directory. Downloading to artifacts\vscode keeps
+          # the stable/ and insiders/ layout expected by the publish helper.
           path: '${{ runner.temp }}\artifacts\vscode'
 
       # PublishStableExtensionAndNuGetPackages scans this path for .nupkg files.
@@ -293,17 +296,25 @@ jobs:
           $packageId = 'Microsoft.dotnet-interactive'
           $url = "https://api.nuget.org/v3-flatcontainer/$($packageId.ToLower())/index.json"
           $timeout = [DateTimeOffset]::UtcNow.AddMinutes(15)
+          $consecutiveFailures = 0
+          $maxConsecutiveFailures = 6
           do {
             Start-Sleep -Seconds 10
             try {
               $index = (Invoke-RestMethod -Uri $url).versions
+              $consecutiveFailures = 0
               if ($index -contains $version) {
                 Write-Host "Version $version is indexed on nuget.org"
                 break
               }
               Write-Host "Waiting for version $version to appear on nuget.org..."
             } catch {
+              $consecutiveFailures++
               Write-Host "Failed to query nuget.org: $_"
+              if ($consecutiveFailures -ge $maxConsecutiveFailures) {
+                Write-Error "Failed to query nuget.org $consecutiveFailures consecutive times while waiting for version $version"
+                exit 1
+              }
             }
           } while ([DateTimeOffset]::UtcNow -lt $timeout)
           if ([DateTimeOffset]::UtcNow -ge $timeout) {

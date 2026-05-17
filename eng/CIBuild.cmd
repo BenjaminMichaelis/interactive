@@ -12,10 +12,13 @@ for %%I in ("%REPO_ROOT%") do set "REPO_ROOT=%%~fI"
 
 set "CONFIGURATION=Release"
 set "SIGN_TYPE="
+set "FORWARDED_ARGS="
 if defined DOTNET_INTERACTIVE_SIGN_TYPE set "SIGN_TYPE=%DOTNET_INTERACTIVE_SIGN_TYPE%"
 
 :parse_args
 if "%~1"=="" goto parsed_args
+set "ARG=%~1"
+set "NEXT=%~2"
 if /I "%~1"=="-configuration" (
   if not "%~2"=="" (
     set "CONFIGURATION=%~2"
@@ -40,8 +43,27 @@ if /I "%~1"=="-c" (
     goto parse_args
   )
 )
-if /I "%~1"=="/p:SignType=Test" set "SIGN_TYPE=Test"
-if /I "%~1"=="/p:SignType=Real" set "SIGN_TYPE=Real"
+if /I "%~1"=="/p:SignType" (
+  if "%~2"=="" (
+    echo Missing value for %~1
+    exit /b 1
+  )
+  set "SIGN_TYPE=%~2"
+  shift
+  shift
+  goto parse_args
+)
+if /I "!ARG:~0,12!"=="/p:SignType=" (
+  set "SIGN_TYPE=!ARG:~12!"
+  shift
+  goto parse_args
+)
+set "FORWARDED_ARG=%1"
+if defined FORWARDED_ARGS (
+  set "FORWARDED_ARGS=!FORWARDED_ARGS! !FORWARDED_ARG!"
+) else (
+  set "FORWARDED_ARGS=!FORWARDED_ARG!"
+)
 shift
 goto parse_args
 
@@ -69,11 +91,11 @@ if not exist "%REPO_ROOT%\artifacts\log\%CONFIGURATION%" (
   mkdir "%REPO_ROOT%\artifacts\log\%CONFIGURATION%"
 )
 
-dotnet restore "%REPO_ROOT%\dotnet-interactive.sln" %COMMON_PROPS%
+dotnet restore "%REPO_ROOT%\dotnet-interactive.sln" %COMMON_PROPS% %FORWARDED_ARGS%
 if errorlevel 1 exit /b %ERRORLEVEL%
 
-dotnet build "%REPO_ROOT%\dotnet-interactive.sln" -c %CONFIGURATION% --no-restore /bl:"%REPO_ROOT%\artifacts\log\%CONFIGURATION%\Build.binlog" %COMMON_PROPS%
+dotnet build "%REPO_ROOT%\dotnet-interactive.sln" -c %CONFIGURATION% --no-restore /bl:"%REPO_ROOT%\artifacts\log\%CONFIGURATION%\Build.binlog" %COMMON_PROPS% %FORWARDED_ARGS%
 if errorlevel 1 exit /b %ERRORLEVEL%
 
-dotnet pack "%REPO_ROOT%\dotnet-interactive.sln" -c %CONFIGURATION% %COMMON_PROPS%
+dotnet pack "%REPO_ROOT%\dotnet-interactive.sln" -c %CONFIGURATION% --no-build --no-restore %COMMON_PROPS% %FORWARDED_ARGS%
 exit /b %ERRORLEVEL%
