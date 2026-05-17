@@ -57,10 +57,10 @@ jobs:
       matrix:
         include:
           - platform: windows
-            runner: windows-2022
+            runner: windows-latest
             artifact-name: windows-test-results
           - platform: linux
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             artifact-name: linux-test-results
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 200
