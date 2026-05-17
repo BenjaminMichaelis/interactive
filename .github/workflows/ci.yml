@@ -52,8 +52,17 @@ env:
   NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
 jobs:
-  build-windows:
-    runs-on: windows-2022
+  build:
+    strategy:
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-2022
+            artifact-name: windows-test-results
+          - platform: linux
+            runner: ubuntu-22.04
+            artifact-name: linux-test-results
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 200
     permissions:
       contents: read
@@ -62,7 +71,8 @@ jobs:
       # core.symlinks must be configured before checkout so git materialises
       # symlinks as real reparse points on Windows.  ensure-symlinks.ps1 also
       # recreates them explicitly as a belt-and-suspenders measure.
-      - name: Configure git symlinks and long paths
+      - name: Configure git symlinks and long paths (Windows)
+        if: matrix.platform == 'windows'
         run: |
           git config --global core.symlinks true
           git config --global core.longpaths true
@@ -72,33 +82,12 @@ jobs:
 
       - uses: ./.github/actions/build-and-test
         with:
-          platform: windows
+          platform: ${{ matrix.platform }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: windows-test-results
-          path: artifacts/TestResults/Release
-          retention-days: 30
-
-  build-linux:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 200
-    permissions:
-      contents: read
-      checks: write   # required by dorny/test-reporter (inside composite action)
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: ./.github/actions/build-and-test
-        with:
-          platform: linux
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: linux-test-results
+          name: ${{ matrix.artifact-name }}
           path: artifacts/TestResults/Release
           retention-days: 30
