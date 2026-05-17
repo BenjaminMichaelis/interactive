@@ -1,0 +1,167 @@
+name: Build and Test
+description: Builds and tests dotnet-interactive on Windows or Linux
+
+inputs:
+  platform:
+    required: true
+    description: 'Target platform: windows or linux'
+  build-config:
+    default: Release
+    description: 'Build configuration (Release or Debug)'
+  node-version:
+    default: '22.22.3'
+    description: 'Node.js version to use'
+  npm-version:
+    default: '11.14.1'
+    description: 'npm CLI version to install globally'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v5
+      with:
+        global-json-file: global.json
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: https://registry.npmjs.org/
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v5
+      with:
+        # CI scripts use a repo-local NuGet cache to keep restore inputs deterministic.
+        path: ${{ github.workspace }}/.packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', 'global.json', 'Directory.Packages.props') }}
+        restore-keys: ${{ runner.os }}-nuget-
+
+    - name: Configure npm cache path
+      shell: pwsh
+      run: npm config set cache "${{ github.workspace }}/.npm-cache"
+
+    - name: Cache npm
+      uses: actions/cache@v5
+      with:
+        path: ${{ github.workspace }}/.npm-cache
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: ${{ runner.os }}-npm-
+
+    # ----- Windows -----
+
+    - name: Ensure symlinks (Windows)
+      if: inputs.platform == 'windows'
+      shell: pwsh
+      run: . "${{ github.workspace }}\src\ensure-symlinks.ps1"
+
+    - name: Upgrade npm (Windows)
+      if: inputs.platform == 'windows'
+      shell: pwsh
+      run: npm install -g npm@${{ inputs.npm-version }}
+      env:
+        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
+    - name: Copy Arcade resources (Windows)
+      if: inputs.platform == 'windows'
+      shell: cmd
+      # robocopy exit codes 0-7 are all success variants; 8+ indicate errors
+      run: |
+        robocopy "eng\resources" "${{ github.workspace }}\artifacts" /E
+        if %errorlevel% leq 7 exit /b 0
+        exit /b 1
+
+    - name: Build (Windows)
+      if: inputs.platform == 'windows'
+      shell: cmd
+      run: eng\CIBuild.cmd -configuration ${{ inputs.build-config }} /p:SignType=Test
+      env:
+        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
+        DOTNET_INTERACTIVE_SIGN_TYPE: Test
+        BUILD_BUILDNUMBER: ${{ github.run_number }}
+        NUGET_PACKAGES: ${{ github.workspace }}\.packages
+        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
+    - name: Run tests (Windows)
+      if: inputs.platform == 'windows'
+      shell: pwsh
+      run: ./test-retry-runner.ps1 -buildConfig ${{ inputs.build-config }}
+      env:
+        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
+        DOTNET_INTERACTIVE_SIGN_TYPE: Test
+        DisableArcade: '1'
+
+    - name: Report test results (Windows)
+      # Fork PRs get a read-only GITHUB_TOKEN regardless of permissions declarations,
+      # so dorny/test-reporter cannot create check runs for fork PRs.
+      if: ${{ inputs.platform == 'windows' && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      uses: dorny/test-reporter@v3
+      with:
+        name: Windows Tests
+        path: artifacts/TestResults/${{ inputs.build-config }}/**/*.trx
+        reporter: dotnet-trx
+        fail-on-error: false
+
+    # ----- Linux -----
+
+    - name: Upgrade npm (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: npm install -g npm@${{ inputs.npm-version }}
+      env:
+        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
+    - name: Copy Arcade resources (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        if [[ ! -d eng/resources ]]; then
+          echo "eng/resources directory not found" >&2; exit 1
+        fi
+        mkdir -p artifacts
+        # Allow empty resources directory, but fail if the directory itself is missing.
+        shopt -s nullglob
+        resources=(eng/resources/*)
+        if (( ${#resources[@]} > 0 )); then
+          cp -r "${resources[@]}" artifacts/
+        else
+          echo "eng/resources is empty; nothing to copy."
+        fi
+
+    - name: Build (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: ./eng/cibuild.sh --configuration ${{ inputs.build-config }} /p:SignType=Test
+      env:
+        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
+        DOTNET_INTERACTIVE_SIGN_TYPE: Test
+        BUILD_BUILDNUMBER: ${{ github.run_number }}
+        NUGET_PACKAGES: ${{ github.workspace }}/.packages
+        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
+    - name: Verify PowerShell availability (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        if ! command -v pwsh >/dev/null 2>&1; then
+          echo "pwsh is required to run test-retry-runner.ps1 on Linux runners." >&2
+          exit 1
+        fi
+
+    - name: Run tests (Linux)
+      if: inputs.platform == 'linux'
+      shell: pwsh
+      run: ./test-retry-runner.ps1 -buildConfig ${{ inputs.build-config }}
+      env:
+        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
+        DOTNET_INTERACTIVE_SIGN_TYPE: Test
+        DisableArcade: '1'
+
+    - name: Report test results (Linux)
+      if: ${{ inputs.platform == 'linux' && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      uses: dorny/test-reporter@v3
+      with:
+        name: Linux Tests
+        path: artifacts/TestResults/${{ inputs.build-config }}/**/*.trx
+        reporter: dotnet-trx
+        fail-on-error: false
