@@ -97,5 +97,5 @@ if errorlevel 1 exit /b %ERRORLEVEL%
 dotnet build "%REPO_ROOT%\dotnet-interactive.sln" -c %CONFIGURATION% --no-restore /bl:"%REPO_ROOT%\artifacts\log\%CONFIGURATION%\Build.binlog" %COMMON_PROPS% %FORWARDED_ARGS%
 if errorlevel 1 exit /b %ERRORLEVEL%
 
-dotnet pack "%REPO_ROOT%\dotnet-interactive.sln" -c %CONFIGURATION% --no-build --no-restore %COMMON_PROPS% %FORWARDED_ARGS%
+dotnet pack "%REPO_ROOT%\dotnet-interactive.sln" -c %CONFIGURATION% --no-build --no-restore /p:BuildProjectReferences=false %COMMON_PROPS% %FORWARDED_ARGS%
 exit /b %ERRORLEVEL%

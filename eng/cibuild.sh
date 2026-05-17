@@ -92,5 +92,6 @@ dotnet pack "$repo_root/dotnet-interactive.sln" \
   -c "$configuration" \
   --no-build \
   --no-restore \
+  "/p:BuildProjectReferences=false" \
   "${common_props[@]}" \
   "${forwarded_args[@]}"
