@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'release/**'
+    # NOTE: paths-ignore is duplicated under push and pull_request because
+    # GitHub Actions does not support YAML anchors. Keep both lists in sync.
+    paths-ignore:
+      - '**/*.md'
+      - '.config/**'
+      - '.devcontainer/**'
+      - '.vscode/**'
+      - 'assets/**'
+      - 'docs/**'
+      - 'images/**'
+      - '.editorconfig'
+      - '.gitignore'
+      - '*.txt'
+      - '*.github-issues'
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'release/**'
+    paths-ignore:
+      - '**/*.md'
+      - '.config/**'
+      - '.devcontainer/**'
+      - '.vscode/**'
+      - 'assets/**'
+      - 'docs/**'
+      - 'images/**'
+      - '.editorconfig'
+      - '.gitignore'
+      - '*.txt'
+      - '*.github-issues'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    timeout-minutes: 200
+    permissions:
+      contents: read
+      checks: write   # required by dorny/test-reporter (inside composite action)
+    steps:
+      # core.symlinks must be configured before checkout so git materialises
+      # symlinks as real reparse points on Windows.  ensure-symlinks.ps1 also
+      # recreates them explicitly as a belt-and-suspenders measure.
+      - name: Configure git symlinks and long paths
+        run: |
+          git config --global core.symlinks true
+          git config --global core.longpaths true
+        shell: pwsh
+
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/build-and-test
+        with:
+          platform: windows
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-test-results
+          path: artifacts/TestResults/Release
+          retention-days: 30
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 200
+    permissions:
+      contents: read
+      checks: write   # required by dorny/test-reporter (inside composite action)
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/build-and-test
+        with:
+          platform: linux
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: linux-test-results
+          path: artifacts/TestResults/Release
+          retention-days: 30
