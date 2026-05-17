@@ -72,7 +72,7 @@ jobs:
           git config --global core.longpaths true
         shell: pwsh
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # For publish builds, OfficialBuildId drives Arcade's deterministic versioning
       - name: Compute OfficialBuildId
@@ -150,26 +150,26 @@ jobs:
             -outDir '${{ runner.temp }}\staging\npm'
         working-directory: src/polyglot-notebooks
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: packages
           path: artifacts/packages/Release/Shipping
           retention-days: 30
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: vscode
           path: '${{ runner.temp }}\staging\vscode'
           retention-days: 30
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: npm
           path: '${{ runner.temp }}\staging\npm'
           retention-days: 30
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: publish-build-test-results
@@ -187,12 +187,12 @@ jobs:
     timeout-minutes: 30
     environment: production
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: packages
           path: packages
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
@@ -229,12 +229,12 @@ jobs:
     timeout-minutes: 15
     environment: production
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: npm
           path: npm
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
@@ -277,17 +277,17 @@ jobs:
           git config --global core.longpaths true
         shell: pwsh
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vscode
           # PackVSCodeExtension.ps1 writes stable/, stable-locked/, and insiders/
@@ -297,7 +297,7 @@ jobs:
 
       # PublishStableExtensionAndNuGetPackages scans this path for .nupkg files.
       # NuGet was already pushed by publish-nuget; --skip-duplicate makes re-push safe.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: packages
           path: '${{ runner.temp }}\artifacts\packages\Shipping'

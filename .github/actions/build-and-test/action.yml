@@ -19,18 +19,18 @@ runs:
   using: composite
   steps:
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         global-json-file: global.json
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         registry-url: https://registry.npmjs.org/
 
     - name: Cache NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         # CI scripts use a repo-local NuGet cache to keep restore inputs deterministic.
         path: ${{ github.workspace }}/.packages
@@ -42,7 +42,7 @@ runs:
       run: npm config set cache "${{ github.workspace }}/.npm-cache"
 
     - name: Cache npm
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ github.workspace }}/.npm-cache
         key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
