@@ -2,9 +2,6 @@ name: Build and Test
 description: Builds and tests dotnet-interactive on Windows or Linux
 
 inputs:
-  platform:
-    required: true
-    description: 'Target platform: windows or linux'
   build-config:
     default: Release
     description: 'Build configuration (Release or Debug)'
@@ -48,22 +45,19 @@ runs:
         key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
         restore-keys: ${{ runner.os }}-npm-
 
-    # ----- Windows -----
-
     - name: Ensure symlinks (Windows)
-      if: inputs.platform == 'windows'
+      if: runner.os == 'Windows'
       shell: pwsh
       run: . "${{ github.workspace }}\src\ensure-symlinks.ps1"
 
-    - name: Upgrade npm (Windows)
-      if: inputs.platform == 'windows'
+    - name: Upgrade npm
       shell: pwsh
       run: npm install -g npm@${{ inputs.npm-version }}
       env:
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
     - name: Copy Arcade resources (Windows)
-      if: inputs.platform == 'windows'
+      if: runner.os == 'Windows'
       shell: cmd
       # robocopy exit codes 0-7 are all success variants; 8+ indicate errors
       run: |
@@ -72,7 +66,7 @@ runs:
         exit /b 1
 
     - name: Build (Windows)
-      if: inputs.platform == 'windows'
+      if: runner.os == 'Windows'
       shell: cmd
       run: eng\CIBuild.cmd -configuration ${{ inputs.build-config }} /p:SignType=Test
       env:
@@ -82,37 +76,8 @@ runs:
         NUGET_PACKAGES: ${{ github.workspace }}\.packages
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
-    - name: Run tests (Windows)
-      if: inputs.platform == 'windows'
-      shell: pwsh
-      run: ./test-retry-runner.ps1 -buildConfig ${{ inputs.build-config }}
-      env:
-        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
-        DOTNET_INTERACTIVE_SIGN_TYPE: Test
-        DisableArcade: '1'
-
-    - name: Report test results (Windows)
-      # Fork PRs get a read-only GITHUB_TOKEN regardless of permissions declarations,
-      # so dorny/test-reporter cannot create check runs for fork PRs.
-      if: ${{ inputs.platform == 'windows' && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-      uses: dorny/test-reporter@v3
-      with:
-        name: Windows Tests
-        path: artifacts/TestResults/${{ inputs.build-config }}/**/*.trx
-        reporter: dotnet-trx
-        fail-on-error: false
-
-    # ----- Linux -----
-
-    - name: Upgrade npm (Linux)
-      if: inputs.platform == 'linux'
-      shell: bash
-      run: npm install -g npm@${{ inputs.npm-version }}
-      env:
-        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
-
     - name: Copy Arcade resources (Linux)
-      if: inputs.platform == 'linux'
+      if: runner.os == 'Linux'
       shell: bash
       run: |
         if [[ ! -d eng/resources ]]; then
@@ -129,7 +94,7 @@ runs:
         fi
 
     - name: Build (Linux)
-      if: inputs.platform == 'linux'
+      if: runner.os == 'Linux'
       shell: bash
       run: ./eng/cibuild.sh --configuration ${{ inputs.build-config }} /p:SignType=Test
       env:
@@ -140,7 +105,7 @@ runs:
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
     - name: Verify PowerShell availability (Linux)
-      if: inputs.platform == 'linux'
+      if: runner.os == 'Linux'
       shell: bash
       run: |
         if ! command -v pwsh >/dev/null 2>&1; then
@@ -148,8 +113,7 @@ runs:
           exit 1
         fi
 
-    - name: Run tests (Linux)
-      if: inputs.platform == 'linux'
+    - name: Run tests
       shell: pwsh
       run: ./test-retry-runner.ps1 -buildConfig ${{ inputs.build-config }}
       env:
@@ -157,11 +121,13 @@ runs:
         DOTNET_INTERACTIVE_SIGN_TYPE: Test
         DisableArcade: '1'
 
-    - name: Report test results (Linux)
-      if: ${{ inputs.platform == 'linux' && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    - name: Report test results
+      # Fork PRs get a read-only GITHUB_TOKEN regardless of permissions declarations,
+      # so dorny/test-reporter cannot create check runs for fork PRs.
+      if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
       uses: dorny/test-reporter@v3
       with:
-        name: Linux Tests
+        name: ${{ runner.os }} Tests
         path: artifacts/TestResults/${{ inputs.build-config }}/**/*.trx
         reporter: dotnet-trx
         fail-on-error: false
