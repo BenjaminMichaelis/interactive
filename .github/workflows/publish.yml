@@ -74,7 +74,7 @@ jobs:
 
       - uses: actions/checkout@v6
 
-      # For publish builds, OfficialBuildId drives Arcade's deterministic versioning
+      # For publish builds, OfficialBuildId drives deterministic versioning
       - name: Compute OfficialBuildId
         id: build-id
         shell: pwsh
@@ -91,7 +91,7 @@ jobs:
           OfficialBuildId: ${{ env.OFFICIAL_BUILD_ID }}
 
       # Extract version from the built .nupkg filename
-      # (Arcade sets StableToolVersionNumber via AZP logging commands; in GHA
+      # (Azure DevOps sets StableToolVersionNumber via logging commands; in GHA
       #  we derive it from the artifact instead.)
       - name: Extract version from .nupkg
         id: version

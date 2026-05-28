@@ -47,7 +47,7 @@ runs:
       env:
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
-    - name: Copy Arcade resources (Windows)
+    - name: Copy build resources (Windows)
       if: runner.os == 'Windows'
       shell: cmd
       # robocopy exit codes 0-7 are all success variants; 8+ indicate errors
@@ -67,7 +67,7 @@ runs:
         NUGET_PACKAGES: ${{ github.workspace }}\.packages
         NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
-    - name: Copy Arcade resources (Linux)
+    - name: Copy build resources (Linux)
       if: runner.os == 'Linux'
       shell: bash
       run: |
@@ -110,7 +110,6 @@ runs:
       env:
         DOTNET_INTERACTIVE_FRONTEND_NAME: CI
         DOTNET_INTERACTIVE_SIGN_TYPE: Test
-        DisableArcade: '1'
 
     - name: Report test results
       # Fork PRs get a read-only GITHUB_TOKEN regardless of permissions declarations,
