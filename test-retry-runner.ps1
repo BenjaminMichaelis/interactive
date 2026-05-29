@@ -29,7 +29,7 @@ function ExecuteTestDirectory([string]$testDirectory, [string]$extraArgs = "") {
     $projectName = [System.IO.Path]::GetFileName($testDirectory.TrimEnd('/', '\'))
     $blameArgs = "--blame-hang-timeout 10m --blame-hang-dump-type full --blame-crash"
 
-    $testCommand = "dotnet test $testDirectory/ $extraArgs -l trx --no-restore --no-build $blameArgs -c $buildConfig --results-directory $repoRoot/artifacts/TestResults/$buildConfig"
+    $testCommand = "dotnet test `"$testDirectory`" $extraArgs -l trx --no-restore --no-build $blameArgs -c $buildConfig --results-directory `"$repoRoot/artifacts/TestResults/$buildConfig`""
     $start = Get-Date
     Write-Timestamped "Starting test command for $projectName"
     Write-Host "Executing $testCommand"

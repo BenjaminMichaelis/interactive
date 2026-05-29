@@ -39,21 +39,24 @@ on:
       - '.gitignore'
       - '*.txt'
       - '*.github-issues'
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
 
 env:
   NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  DOTNET_INTERACTIVE_FRONTEND_NAME: CI
+  DOTNET_INTERACTIVE_SIGN_TYPE: Test
 
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         runner: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.runner }}
