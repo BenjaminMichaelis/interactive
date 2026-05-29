@@ -196,8 +196,9 @@ public static class KernelExtensions
             throw new InvalidOperationException($"A command handler for {nameof(SendValue)} is already registered on kernel {kernel.Name}.");
         }
 
+        var barrier = new Barrier(2);
+        kernel.RegisterForDisposal(barrier);
         ConcurrentDictionary<string, FormattedValue> receivedValues = new(StringComparer.OrdinalIgnoreCase);
-        ConcurrentDictionary<string, (TaskCompletionSource<FormattedValue> received, TaskCompletionSource<bool> processed)> pendingInputValues = new(StringComparer.OrdinalIgnoreCase);
 
         kernel.RegisterCommandHandler<RequestInputs>(async (requestInputs, context) =>
         {
@@ -235,22 +236,14 @@ public static class KernelExtensions
                     ]());
             }
 
-            var inputValueReceived = new TaskCompletionSource<FormattedValue>();
-            var inputProcessingCompleted = new TaskCompletionSource<bool>();
-            pendingInputValues.TryAdd(formId, (inputValueReceived, inputProcessingCompleted));
+            context.Display(html);
 
-            try
+            await Task.Yield();
+
+            barrier.SignalAndWait(context.CancellationToken);
+
+            if (receivedValues.TryGetValue(formId, out var formattedValue))
             {
-                context.Display(html);
-
-                await Task.Yield();
-
-                if (receivedValues.TryRemove(formId, out var earlyReceivedValue))
-                {
-                    inputValueReceived.TrySetResult(earlyReceivedValue);
-                }
-
-                var formattedValue = await inputValueReceived.Task.WaitAsync(context.CancellationToken);
                 var values = JsonSerializer.Deserialize<Dictionary<string, string>>(formattedValue.Value);
 
                 if (secretManager is not null)
@@ -271,24 +264,22 @@ public static class KernelExtensions
                                     values,
                                     requestInputs));
             }
-            finally
-            {
-                inputProcessingCompleted.TrySetResult(true);
-                pendingInputValues.TryRemove(formId, out var _ignoredPendingValue);
-                receivedValues.TryRemove(formId, out var _ignoredReceivedValue);
-            }
-        });
-        kernel.RegisterCommandHandler<SendValue>(async (sendValue, context) =>
-        {
-            if (pendingInputValues.TryGetValue(sendValue.Name, out var pendingInputValueState))
-            {
-                pendingInputValueState.received.TrySetResult(sendValue.FormattedValue);
-                await pendingInputValueState.processed.Task.WaitAsync(context.CancellationToken);
-            }
             else
             {
-                receivedValues[sendValue.Name] = sendValue.FormattedValue;
+                context.Fail(requestInputs, message: "No input received.");
             }
+        });
+        kernel.RegisterCommandHandler<SendValue>((sendValue, context) =>
+        {
+            receivedValues[sendValue.Name] = sendValue.FormattedValue;
+
+            // don't wait on the barrier if the form hasn't been displayed 
+            if (barrier.ParticipantsRemaining == 1)
+            {
+                barrier.SignalAndWait(context.CancellationToken);
+            }
+
+            return Task.CompletedTask;
         });
 
         return kernel;
