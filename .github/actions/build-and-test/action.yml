@@ -83,7 +83,7 @@ runs:
     - name: Build (Linux)
       if: runner.os == 'Linux'
       shell: bash
-      run: ./eng/cibuild.sh --configuration ${{ inputs.build-config }} --prepareMachine /p:SignType=Test
+      run: ./eng/cibuild.sh --configuration ${{ inputs.build-config }} /p:SignType=Test
       env:
         BUILD_BUILDNUMBER: ${{ github.run_number }}
         NUGET_PACKAGES: ${{ github.workspace }}/.packages
