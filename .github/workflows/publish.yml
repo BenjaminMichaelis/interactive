@@ -21,6 +21,8 @@ permissions:
 env:
   NODE_VERSION: '22.22.3'
   NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  DOTNET_INTERACTIVE_FRONTEND_NAME: CI
+  DOTNET_INTERACTIVE_SIGN_TYPE: Test
 
 jobs:
   # ──────────────────────────────────────────────────────────
@@ -85,7 +87,6 @@ jobs:
 
       - uses: ./.github/actions/build-and-test
         with:
-          platform: windows
           node-version: ${{ env.NODE_VERSION }}
         env:
           OfficialBuildId: ${{ env.OFFICIAL_BUILD_ID }}
@@ -194,7 +195,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
-          global-json-file: global.json
+          dotnet-version: '10.0.x'
 
       - name: Push NuGet packages
         if: needs.prepare.outputs.simulate != 'true'
