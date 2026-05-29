@@ -44,10 +44,8 @@ runs:
     - name: Upgrade npm
       shell: pwsh
       run: npm install -g npm@${{ inputs.npm-version }}
-      env:
-        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
-    - name: Copy Arcade resources (Windows)
+    - name: Copy build resources (Windows)
       if: runner.os == 'Windows'
       shell: cmd
       # robocopy exit codes 0-7 are all success variants; 8+ indicate errors
@@ -61,13 +59,10 @@ runs:
       shell: cmd
       run: eng\CIBuild.cmd -configuration ${{ inputs.build-config }} /p:SignType=Test
       env:
-        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
-        DOTNET_INTERACTIVE_SIGN_TYPE: Test
         BUILD_BUILDNUMBER: ${{ github.run_number }}
         NUGET_PACKAGES: ${{ github.workspace }}\.packages
-        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
 
-    - name: Copy Arcade resources (Linux)
+    - name: Copy build resources (Linux)
       if: runner.os == 'Linux'
       shell: bash
       run: |
@@ -89,27 +84,13 @@ runs:
       shell: bash
       run: ./eng/cibuild.sh --configuration ${{ inputs.build-config }} /p:SignType=Test
       env:
-        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
-        DOTNET_INTERACTIVE_SIGN_TYPE: Test
         BUILD_BUILDNUMBER: ${{ github.run_number }}
         NUGET_PACKAGES: ${{ github.workspace }}/.packages
-        NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
-
-    - name: Verify PowerShell availability (Linux)
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
-        if ! command -v pwsh >/dev/null 2>&1; then
-          echo "pwsh is required to run test-retry-runner.ps1 on Linux runners." >&2
-          exit 1
-        fi
 
     - name: Run tests
       shell: pwsh
       run: ./test-retry-runner.ps1 -buildConfig ${{ inputs.build-config }}
       env:
-        DOTNET_INTERACTIVE_FRONTEND_NAME: CI
-        DOTNET_INTERACTIVE_SIGN_TYPE: Test
         DisableArcade: '1'
 
     - name: Report test results
