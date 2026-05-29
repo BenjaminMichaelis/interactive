@@ -76,10 +76,8 @@ internal partial class JupyterKernel : Kernel
                                 .OfType<T>()
                                 .Take(1);
 
-        var replyTask = reply.ToTask(token);
-
         await sender.SendAsync(request);
-        var results = await replyTask;
+        var results = await reply.ToTask(token);
 
         return results;
     }
