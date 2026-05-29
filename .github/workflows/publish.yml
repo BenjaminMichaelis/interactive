@@ -100,7 +100,7 @@ jobs:
         run: |
           $packagePattern = '^Microsoft\.dotnet-interactive\.(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\.nupkg$'
           $packages = @(Get-ChildItem artifacts\packages\Release\Shipping\Microsoft.dotnet-interactive.*.nupkg -File -ErrorAction SilentlyContinue |
-                       Where-Object { $_.Name -match $packagePattern })
+                       Where-Object { $_.Name -notlike '*.symbols.nupkg' -and $_.Name -match $packagePattern })
           if ($packages.Count -eq 0) {
             Write-Error "No bare Microsoft.dotnet-interactive package with a SemVer filename found"
             exit 1
