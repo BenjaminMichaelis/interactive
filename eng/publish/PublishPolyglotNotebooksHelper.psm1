@@ -57,13 +57,14 @@ function PublishInsidersExtension {
 
     # This is a brittle check but the command does not return a non-zero exit code for failed validation.
     # Opened https://github.com/microsoft/vscode-vsce/issues/1192 to track this.
+    $isTestSign = $env:DOTNET_INTERACTIVE_SIGN_TYPE -eq 'Test'
     if ($output -match 'Signature verification result: Success') {
         Write-Host "Signature verification succeeded for $extension"
-    } elseif ($simulate) {
+    } elseif ($simulate -or $isTestSign) {
         # Test-signed builds (SignType=Test) are expected to fail signature verification.
         # Soft-fail is acceptable only in simulate/test-sign mode.
         Write-Host $output
-        Write-Host "##[warning]Signature verification did not succeed for $extension (expected for test-signed builds)"
+        Write-Host "##[warning]Signature verification did not succeed for $extension (expected for test-signed or simulated builds)"
     } else {
         # Production publish: fail closed to prevent shipping a tampered or unsigned extension.
         Write-Host $output
