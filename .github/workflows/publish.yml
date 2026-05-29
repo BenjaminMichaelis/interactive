@@ -357,6 +357,8 @@ jobs:
       # The publish-nuget job above performs the primary OIDC-authenticated push;
       # the re-push here is harmless but intentional so the PS script remains the
       # single source of truth for the full publish sequence.
+      # For fork builds, DOTNET_INTERACTIVE_SIGN_TYPE=Test is expected and the
+      # helper script treats signature verification as non-fatal in that mode.
       - name: Publish VSCode extensions (insiders then stable)
         shell: pwsh
         run: |
