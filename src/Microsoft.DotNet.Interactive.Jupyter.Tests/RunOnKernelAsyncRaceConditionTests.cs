@@ -16,6 +16,61 @@ using Message = Microsoft.DotNet.Interactive.Jupyter.Messaging.Message;
 namespace Microsoft.DotNet.Interactive.Jupyter.Tests;
 
 /// <summary>
+/// Tests JupyterKernel.CreateAsync with a sender that replies synchronously inside
+/// SendAsync -- the exact scenario that hangs on fast Linux GHA runners.
+/// This test FAILS with the upstream code (subscribe after send) and PASSES with the fix.
+/// </summary>
+public class JupyterKernelCreateAsync_SynchronousSenderTests
+{
+    private sealed class SynchronousKernelInfoSender : IMessageSender
+    {
+        private readonly Subject<Message> _subject;
+
+        public SynchronousKernelInfoSender(Subject<Message> subject) => _subject = subject;
+
+        public Task SendAsync(Message message)
+        {
+            // Reply synchronously BEFORE returning -- simulates a fast in-process kernel
+            // that completes within the same call stack as SendAsync.
+            var reply = Message.CreateReply(
+                new KernelInfoReply("5.3", "test", "1.0", new LanguageInfo("python", "3.10", "text/x-python", ".py")),
+                message);
+            _subject.OnNext(reply);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class SubjectReceiver : IMessageReceiver
+    {
+        public SubjectReceiver(Subject<Message> subject) => Messages = subject.AsObservable();
+        public IObservable<Message> Messages { get; }
+    }
+
+    [Fact]
+    public async Task CreateAsync_completes_when_sender_replies_synchronously()
+    {
+        // Arrange: hot Subject + synchronous sender that fires reply inside SendAsync
+        var subject = new Subject<Message>();
+        var sender = new SynchronousKernelInfoSender(subject);
+        var receiver = new SubjectReceiver(subject);
+
+        // Act: CreateAsync -> RequestKernelInfo -> RunOnKernelAsync
+        // With the fix (subscribe before send) this completes immediately.
+        // With upstream code (subscribe after send) the reply is missed and this hangs.
+        var createTask = JupyterKernel.CreateAsync("test-kernel", sender, receiver);
+        var completed = await Task.WhenAny(createTask, Task.Delay(TimeSpan.FromSeconds(5)));
+
+        // Assert
+        completed.Should().Be(createTask,
+            "CreateAsync must complete even when the KernelInfoReply arrives synchronously " +
+            "inside SendAsync (subscribe-before-send guarantees the reply is never missed)");
+
+        using var kernel = await createTask;
+        kernel.KernelInfo.LanguageName.Should().Be("python");
+    }
+}
+
+/// <summary>
 /// Proves the race condition in JupyterKernel.RunOnKernelAsync where subscribing
 /// to a hot observable AFTER sending the request causes missed replies when the
 /// reply arrives synchronously (before subscription).
