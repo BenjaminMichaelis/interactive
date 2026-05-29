@@ -57,7 +57,7 @@ runs:
     - name: Build (Windows)
       if: runner.os == 'Windows'
       shell: cmd
-      run: eng\CIBuild.cmd -configuration ${{ inputs.build-config }} -prepareMachine -sign /p:SignType=Test
+      run: eng\CIBuild.cmd -configuration ${{ inputs.build-config }} /p:SignType=Test
       env:
         BUILD_BUILDNUMBER: ${{ github.run_number }}
         NUGET_PACKAGES: ${{ github.workspace }}\.packages
