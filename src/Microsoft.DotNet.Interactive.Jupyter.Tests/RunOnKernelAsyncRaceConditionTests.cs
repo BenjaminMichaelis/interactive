@@ -2,147 +2,90 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
-using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Interactive.Jupyter.Connection;
 using Microsoft.DotNet.Interactive.Jupyter.Messaging;
 using Microsoft.DotNet.Interactive.Jupyter.Protocol;
 using Xunit;
+using Xunit.Abstractions;
 using Message = Microsoft.DotNet.Interactive.Jupyter.Messaging.Message;
 
 namespace Microsoft.DotNet.Interactive.Jupyter.Tests;
 
 /// <summary>
-/// Tests JupyterKernel.CreateAsync with a sender that replies synchronously inside
-/// SendAsync -- the exact scenario that hangs on fast Linux GHA runners.
-/// This test FAILS with the upstream code (subscribe after send) and PASSES with the fix.
+/// Regression test for the hot-observable race condition in JupyterKernel.RunOnKernelAsync.
+///
+/// Root cause: on fast Linux GHA runners, an in-process Jupyter kernel can complete and
+/// publish its reply synchronously inside IMessageSender.SendAsync — before the caller
+/// has a chance to subscribe via reply.ToTask(). Because IMessageReceiver.Messages is a
+/// hot observable (no replay buffer), the reply is permanently missed and the task hangs.
+///
+/// Fix: subscribe (ToTask) BEFORE calling SendAsync, so the subscription is active when
+/// the reply fires regardless of whether it arrives synchronously or asynchronously.
+///
+/// This test exercises the full production stack:
+///   ConnectJupyterKernelDirective -> JupyterKernelConnector.CreateKernelAsync
+///   -> JupyterKernel.CreateAsync -> RunOnKernelAsync (the race-critical path)
 /// </summary>
-public class JupyterKernelCreateAsync_SynchronousSenderTests
+[Collection("Do not parallelize")]
+public class RaceConditionRegressionTests : JupyterKernelTestBase
 {
-    private sealed class SynchronousKernelInfoSender : IMessageSender
-    {
-        private readonly Subject<Message> _subject;
+    public RaceConditionRegressionTests(ITestOutputHelper output) : base(output) { }
 
-        public SynchronousKernelInfoSender(Subject<Message> subject) => _subject = subject;
+    [Fact(Timeout = 10_000)]
+    public async Task CreateKernelAsync_does_not_hang_when_KernelInfoReply_arrives_synchronously()
+    {
+        // Arrange: a tracker whose SendAsync fires KernelInfoReply synchronously before
+        // returning — exactly what happens on fast Linux GHA runners with in-process kernels.
+        using var tracker = new SynchronousKernelInfoTracker();
+        var kernelConnection = new TestJupyterKernelConnection(tracker);
+        var jupyterConnection = new TestJupyterConnection(kernelConnection);
+        var options = new SimulatedJupyterConnectionOptions(jupyterConnection);
+
+        // Act: exercises JupyterKernel.CreateAsync -> RunOnKernelAsync.
+        // With the fix (subscribe before send) this completes well within the timeout.
+        // With the upstream code (subscribe after send) the reply is missed and this hangs.
+        var kernel = await CreateJupyterKernelAsync(options);
+
+        // Assert
+        kernel.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// An IMessageTracker that fires KernelInfoReply synchronously inside SendAsync,
+    /// simulating a fast in-process kernel that completes on the same call stack.
+    /// Language name "testlang" is intentionally unknown so CommCommandEventChannelConfiguration
+    /// skips its additional setup (no extra messages needed from this tracker).
+    /// </summary>
+    private sealed class SynchronousKernelInfoTracker : IMessageTracker
+    {
+        private readonly Subject<Message> _sent = new();
+        private readonly Subject<Message> _received = new();
+
+        public IObservable<Message> Messages => _received;
+        public IObservable<Message> SentMessages => _sent;
+        public IObservable<Message> ReceivedMessages => _received;
 
         public Task SendAsync(Message message)
         {
-            // Reply synchronously BEFORE returning -- simulates a fast in-process kernel
-            // that completes within the same call stack as SendAsync.
+            _sent.OnNext(message);
             var reply = Message.CreateReply(
-                new KernelInfoReply("5.3", "test", "1.0", new LanguageInfo("python", "3.10", "text/x-python", ".py")),
+                new KernelInfoReply("5.3", "test", "1.0",
+                    new LanguageInfo("testlang", "1.0", "text/plain", ".txt")),
                 message);
-            _subject.OnNext(reply);
+            // Fire synchronously BEFORE returning — this is the race trigger.
+            _received.OnNext(reply);
             return Task.CompletedTask;
         }
-    }
 
-    private sealed class SubjectReceiver : IMessageReceiver
-    {
-        public SubjectReceiver(Subject<Message> subject) => Messages = subject.AsObservable();
-        public IObservable<Message> Messages { get; }
-    }
+        public void Attach(IMessageSender sender, IMessageReceiver receiver) { }
 
-    [Fact]
-    public async Task CreateAsync_completes_when_sender_replies_synchronously()
-    {
-        // Arrange: hot Subject + synchronous sender that fires reply inside SendAsync
-        var subject = new Subject<Message>();
-        var sender = new SynchronousKernelInfoSender(subject);
-        var receiver = new SubjectReceiver(subject);
-
-        // Act: CreateAsync -> RequestKernelInfo -> RunOnKernelAsync
-        // With the fix (subscribe before send) this completes immediately.
-        // With upstream code (subscribe after send) the reply is missed and this hangs.
-        var createTask = JupyterKernel.CreateAsync("test-kernel", sender, receiver);
-        var completed = await Task.WhenAny(createTask, Task.Delay(TimeSpan.FromSeconds(5)));
-
-        // Assert
-        completed.Should().Be(createTask,
-            "CreateAsync must complete even when the KernelInfoReply arrives synchronously " +
-            "inside SendAsync (subscribe-before-send guarantees the reply is never missed)");
-
-        using var kernel = await createTask;
-        kernel.KernelInfo.LanguageName.Should().Be("python");
-    }
-}
-
-/// <summary>
-/// Proves the race condition in JupyterKernel.RunOnKernelAsync where subscribing
-/// to a hot observable AFTER sending the request causes missed replies when the
-/// reply arrives synchronously (before subscription).
-/// </summary>
-public class RunOnKernelAsyncRaceConditionTests
-{
-    /// <summary>
-    /// Simulates the BUGGY ordering: send first, then subscribe.
-    /// When the reply arrives synchronously during SendAsync (before ToTask subscribes),
-    /// the observable never produces a value and the task hangs indefinitely.
-    /// </summary>
-    [Fact]
-    public async Task Buggy_order_subscribe_after_send_misses_synchronous_reply()
-    {
-        // Arrange: hot observable (Subject) simulating IMessageReceiver.Messages
-        var subject = new Subject<Message>();
-
-        var request = Message.Create(new ExecuteRequest("test"));
-
-        // Build the observable pipeline (no subscription yet - just like the real code)
-        var reply = subject.AsObservable()
-            .ResponseOf(request)
-            .Content()
-            .OfType<ExecuteReplyOk>()
-            .Take(1);
-
-        // Act: simulate the BUGGY order — send first (which publishes reply), then subscribe
-        // The sender synchronously publishes the reply to the subject
-        var replyMessage = Message.CreateReply(new ExecuteReplyOk(), request);
-        subject.OnNext(replyMessage); // Reply fires BEFORE subscription
-
-        // Now subscribe (too late — the message was already emitted and missed)
-        var replyTask = reply.ToTask(CancellationToken.None);
-
-        // Assert: the task should NOT complete because the reply was missed
-        var completedTask = await Task.WhenAny(replyTask, Task.Delay(TimeSpan.FromMilliseconds(500)));
-        completedTask.Should().NotBe(replyTask,
-            "the reply was emitted before subscription, so it should be permanently missed (race condition)");
-    }
-
-    /// <summary>
-    /// Simulates the FIXED ordering: subscribe first, then send.
-    /// The subscription is active when the reply arrives, so the task completes successfully.
-    /// </summary>
-    [Fact]
-    public async Task Fixed_order_subscribe_before_send_captures_synchronous_reply()
-    {
-        // Arrange: hot observable (Subject) simulating IMessageReceiver.Messages
-        var subject = new Subject<Message>();
-
-        var request = Message.Create(new ExecuteRequest("test"));
-
-        // Build the observable pipeline
-        var reply = subject.AsObservable()
-            .ResponseOf(request)
-            .Content()
-            .OfType<ExecuteReplyOk>()
-            .Take(1);
-
-        // Act: simulate the FIXED order — subscribe first, then send
-        var replyTask = reply.ToTask(CancellationToken.None); // Subscribe BEFORE send
-
-        // The sender synchronously publishes the reply to the subject
-        var replyMessage = Message.CreateReply(new ExecuteReplyOk(), request);
-        subject.OnNext(replyMessage); // Reply fires AFTER subscription — captured!
-
-        // Assert: the task should complete successfully within a short timeout
-        var completedTask = await Task.WhenAny(replyTask, Task.Delay(TimeSpan.FromMilliseconds(500)));
-        completedTask.Should().Be(replyTask,
-            "the reply was emitted after subscription, so it should be captured");
-
-        var result = await replyTask;
-        result.Should().BeOfType<ExecuteReplyOk>();
+        public void Dispose()
+        {
+            _sent.Dispose();
+            _received.Dispose();
+        }
     }
 }
