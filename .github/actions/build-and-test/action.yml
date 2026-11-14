@@ -95,6 +95,38 @@ runs:
         DisableArcade: '1'
         POCKETLOGGER_LOG_PATH: ${{ github.workspace }}/artifacts/TestResults/${{ inputs.build-config }}/pocketlogger.test.log
 
+    # JS/TS unit tests (parity with legacy `build.ps1 -test` / `build.sh --test`, which ran
+    # `npm run ciTest` per package). npm ci + compile already happened in the Build step above.
+    # These are plain mocha runs (no VS Code/Electron host, no display needed), so they run
+    # identically on both OS runners. They are placed after the .NET "Run tests" step because
+    # that step has an implicit success() condition and must not be skipped by a JS failure;
+    # `!cancelled()` here ensures a .NET test failure does not hide JS results either.
+    # ciTest writes TRX files to artifacts/TestResults/Release (hardcoded in each testConfig.json),
+    # which the reporter, playlist and artifact-upload steps below/in ci.yml pick up.
+    - name: Test polyglot-notebooks (npm)
+      if: ${{ !cancelled() }}
+      shell: bash
+      working-directory: src/polyglot-notebooks
+      run: npm run ciTest
+
+    - name: Test polyglot-notebooks-browser (npm)
+      if: ${{ !cancelled() }}
+      shell: bash
+      working-directory: src/polyglot-notebooks-browser
+      run: npm run ciTest
+
+    - name: Test polyglot-notebooks-vscode (npm)
+      if: ${{ !cancelled() }}
+      shell: bash
+      working-directory: src/polyglot-notebooks-vscode
+      run: npm run ciTest
+
+    - name: Test polyglot-notebooks-vscode-insiders (npm)
+      if: ${{ !cancelled() }}
+      shell: bash
+      working-directory: src/polyglot-notebooks-vscode-insiders
+      run: npm run ciTest
+
     - name: Report test results
       # Fork PRs get a read-only GITHUB_TOKEN regardless of permissions declarations,
       # so dorny/test-reporter cannot create check runs for fork PRs.
