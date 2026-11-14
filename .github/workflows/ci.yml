@@ -125,8 +125,8 @@ jobs:
             -outDir '${{ runner.temp }}\staging\npm'
         working-directory: src/polyglot-notebooks
 
-      # Symbols packages are incomplete (see eng/AfterSolutionBuild.targets:StripFilesFromSymbolPackages),
-      # so keep them out of the published packages artifact (parity with legacy "Clean symbol packages").
+      # Symbols packages are incomplete (see StripFilesFromSymbolPackages in eng/AfterSolutionBuild.targets),
+      # so keep them out of the packages artifact, as eng/templates/build-and-test-tasks.yml did.
       - name: Remove symbols packages (Windows)
         if: always() && runner.os == 'Windows'
         shell: pwsh
