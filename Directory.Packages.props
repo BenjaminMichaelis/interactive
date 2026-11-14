@@ -57,7 +57,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(MicrosoftEntityFrameworkVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(MicrosoftEntityFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <PackageVersion Include="Microsoft.IdentityClient" Version="$(MicrosoftIdentityClientVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" Condition="'$(DisableArcade)' == '1'" />
     <PackageVersion Include="microsoft.playwright" Version="1.52.0" />
