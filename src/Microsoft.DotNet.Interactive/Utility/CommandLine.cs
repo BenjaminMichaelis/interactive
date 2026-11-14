@@ -104,6 +104,12 @@ public static class CommandLine
         return await source;
     }
 
+    private static readonly string[] SdkResolutionEnvironmentVariables =
+    {
+        "MSBuildSDKsPath",
+        "MSBuildExtensionsPath"
+    };
+
     public static Process StartProcess(
         string command,
         string args,
@@ -135,6 +141,16 @@ public static class CommandLine
                     },
                 }
             };
+
+            // Hosts such as `dotnet test` / MSBuild export the SDK they are running under via these
+            // variables. If they leak into a child `dotnet` process whose working directory resolves a
+            // different SDK (e.g. a prebuild directory with its own global.json), `dotnet build` loads the
+            // parent's SDK targets while `dotnet new` / global.json selected another one, which fails with
+            // NETSDK1045. Let the child resolve its SDK from its own working directory instead.
+            foreach (var name in SdkResolutionEnvironmentVariables)
+            {
+                process.StartInfo.EnvironmentVariables.Remove(name);
+            }
 
             operation.Info("> {process} {args}", command, args);
 
