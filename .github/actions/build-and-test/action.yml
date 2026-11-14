@@ -95,8 +95,10 @@ runs:
         DisableArcade: '1'
         POCKETLOGGER_LOG_PATH: ${{ github.workspace }}/artifacts/TestResults/${{ inputs.build-config }}/pocketlogger.test.log
 
-    # JS tests, as in eng/build.ps1 and eng/build.sh. They run after "Run tests" so a JS failure
-    # can't skip it, and with !cancelled() so a .NET failure doesn't hide the JS results.
+    # JS tests, as the Azure Pipelines build ran them:
+    # https://github.com/BenjaminMichaelis/interactive/blob/55a09aeaba91f7ba0496bcd9b627a519af66c8f5/eng/build.ps1#L53
+    # They run after "Run tests" so a JS failure can't skip it, and with !cancelled() so a .NET
+    # failure doesn't hide the JS results.
     - name: Test polyglot-notebooks (npm)
       if: ${{ !cancelled() }}
       shell: bash

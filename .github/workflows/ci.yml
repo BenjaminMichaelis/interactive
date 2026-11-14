@@ -126,7 +126,8 @@ jobs:
         working-directory: src/polyglot-notebooks
 
       # Symbols packages are incomplete (see StripFilesFromSymbolPackages in eng/AfterSolutionBuild.targets),
-      # so keep them out of the packages artifact, as eng/templates/build-and-test-tasks.yml did.
+      # so keep them out of the packages artifact, as the Azure Pipelines build did:
+      # https://github.com/BenjaminMichaelis/interactive/blob/55a09aeaba91f7ba0496bcd9b627a519af66c8f5/eng/templates/build-and-test-tasks.yml#L108-L111
       - name: Remove symbols packages (Windows)
         if: always() && runner.os == 'Windows'
         shell: pwsh
