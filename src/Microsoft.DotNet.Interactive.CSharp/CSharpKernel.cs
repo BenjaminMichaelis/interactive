@@ -59,7 +59,7 @@ public class CSharpKernel :
     public CSharpKernel(string name) : base(name)
     {
         KernelInfo.LanguageName = "C#";
-        KernelInfo.LanguageVersion = "15.0";
+        KernelInfo.LanguageVersion = LanguageVersion.Latest.MapSpecifiedToEffectiveVersion().ToDisplayString();
         KernelInfo.DisplayName = $"{KernelInfo.LocalName} - C# Script";
         KernelInfo.Description = """
                                  Compile and run C# Script
