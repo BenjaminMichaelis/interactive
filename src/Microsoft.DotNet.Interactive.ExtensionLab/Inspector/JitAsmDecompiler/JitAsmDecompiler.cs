@@ -258,7 +258,7 @@ internal sealed class JitAsmDecompiler
         context.Writer.WriteLine();
 
         var md = (ulong)method.MethodHandle.Value.ToInt64();
-        var signature = context.Runtime.DacLibrary.SOSDacInterface.GetMethodDescName(md);
+        var signature = context.Runtime.GetMethodByHandle(md)?.Signature;
 
         context.Writer.WriteLine(signature ?? "Unknown Method");
     }

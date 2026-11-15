@@ -20,7 +20,7 @@ internal static class Defaults
 
     internal static readonly Pool<ClrRuntime> DefaultRuntimePool = new Pool<ClrRuntime>(() => {
         using var currentProcess = Process.GetCurrentProcess();
-        var dataTarget = DataTarget.AttachToProcess(currentProcess.Id, suspend: false);
+        var dataTarget = DataTarget.CreateSnapshotAndAttach(currentProcess.Id);
         return dataTarget.ClrVersions.Single(c => c.Flavor == ClrFlavor.Core).CreateRuntime();
     });
 
