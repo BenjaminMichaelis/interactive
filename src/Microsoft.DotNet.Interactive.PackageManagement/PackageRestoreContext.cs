@@ -17,7 +17,13 @@ namespace Microsoft.DotNet.Interactive.PackageManagement;
 
 public class PackageRestoreContext : IDisposable
 {
+    // Restore for the framework this assembly was built for, so the net10.0 build of the tool
+    // (used where only the .NET 10 runtime is installed) keeps resolving net10.0 package assets.
+#if NET11_0_OR_GREATER
+    private const string restoreTfm = "net11.0";
+#else
     private const string restoreTfm = "net10.0";
+#endif
     private readonly ConcurrentDictionary<string, PackageReference> _requestedPackageReferences = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, ResolvedPackageReference> _resolvedPackageReferences = new(StringComparer.OrdinalIgnoreCase);
 
