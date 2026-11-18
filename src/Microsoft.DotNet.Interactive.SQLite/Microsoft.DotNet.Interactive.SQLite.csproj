@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <TargetFramework>net11.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <PackageDescription>Microsoft SQLite support for .NET Interactive</PackageDescription>
     <PackageTags>polyglot notebook dotnet interactive SQL SQLite Data</PackageTags>
@@ -11,9 +11,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <!-- Keep the net10.0 asset on the Microsoft.Data.Sqlite 10.x line (and the SQLitePCLRaw 2.x dependency floor it implies). -->
-    <PackageReference Include="Microsoft.Data.Sqlite" VersionOverride="10.0.0" Condition="'$(TargetFramework)' == 'net10.0'" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Condition="'$(TargetFramework)' != 'net10.0'" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Pocket.Disposable">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <TargetFramework>net11.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <OutputType>Library</OutputType>
   </PropertyGroup>
@@ -25,8 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Pack runs in the outer build of this multi-targeted project, where OutputPath has no TFM folder. interactive-extensions has no TFM folder either, so ship the net10.0 build, which loads on both .NET 10 and .NET 11 hosts. -->
-    <None Include="$(OutputPath)net10.0/Microsoft.DotNet.Interactive.Journey.dll" Pack="true" PackagePath="interactive-extensions/dotnet" />
+    <None Include="$(OutputPath)/Microsoft.DotNet.Interactive.Journey.dll" Pack="true" PackagePath="interactive-extensions/dotnet" />
   </ItemGroup>
 
   <ItemGroup>

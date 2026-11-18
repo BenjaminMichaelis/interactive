@@ -1,2 +1,0 @@
-# The net10 smoke test script runs under bash on every runner, so it must keep LF line endings.
-eng/smoke-test-net10.sh text eol=lf
