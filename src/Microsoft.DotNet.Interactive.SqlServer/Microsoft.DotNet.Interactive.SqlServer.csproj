@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
@@ -29,8 +29,11 @@
    <PackageReference Include="System.Drawing.Common" />
    <PackageReference Include="Microsoft.Data.SqlClient" />
    <PackageReference Include="Humanizer" />
-   <PackageReference Include="Azure.Core" />
-   <PackageReference Include="Azure.Identity" />
+   <!-- Keep the net10.0 asset on the Azure.Core/Azure.Identity versions it shipped with. -->
+    <PackageReference Include="Azure.Core" VersionOverride="1.50.0" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="Azure.Core" Condition="'$(TargetFramework)' != 'net10.0'" />
+   <PackageReference Include="Azure.Identity" VersionOverride="1.17.1" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="Azure.Identity" Condition="'$(TargetFramework)' != 'net10.0'" />
    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" >
