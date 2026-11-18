@@ -57,6 +57,7 @@ runs:
         exit /b 1
 
     - name: Build (Windows)
+      id: build-windows
       if: runner.os == 'Windows'
       shell: cmd
       run: eng\CIBuild.cmd -configuration ${{ inputs.build-config }} /p:SignType=Test
@@ -83,6 +84,7 @@ runs:
         fi
 
     - name: Build (Linux)
+      id: build-linux
       if: runner.os == 'Linux'
       shell: bash
       run: ./eng/cibuild.sh --configuration ${{ inputs.build-config }} /p:SignType=Test
@@ -99,18 +101,15 @@ runs:
         POCKETLOGGER_LOG_PATH: ${{ github.workspace }}/artifacts/TestResults/${{ inputs.build-config }}/pocketlogger.test.log
 
     # The tests only exercise the net11.0 build of the tool. This starts the net10.0 build (what runs where only
-    # the .NET 10 runtime is installed) and checks that it executes C# on a .NET 10 runtime.
+    # the .NET 10 runtime is installed) and checks that it executes C# on a .NET 10 runtime and that
+    # `#r "nuget:"` restores and loads a package through the net10.0 restore path. It only runs when the build
+    # succeeded (the net10.0 binaries exist), and runs regardless of test failures. The script polls for the
+    # commands to complete (up to 5 minutes, to allow for a cold start and a cold NuGet restore) and exits non-zero
+    # on any failure.
     - name: Smoke test dotnet-interactive on .NET 10
-      if: ${{ !cancelled() }}
+      if: ${{ !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') }}
       shell: bash
-      run: |
-        dll="src/dotnet-interactive/bin/${{ inputs.build-config }}/net10.0/Microsoft.DotNet.Interactive.App.dll"
-        out="${RUNNER_TEMP}/net10-smoke.out"
-        echo '{"commandType":"SubmitCode","command":{"code":"System.Environment.Version.Major","targetKernelName":"csharp"},"token":"net10-smoke"}' > "${RUNNER_TEMP}/net10-smoke.json"
-        # The stdio host keeps running after stdin closes, so stop it after a fixed time.
-        timeout 90 dotnet "$dll" stdio < "${RUNNER_TEMP}/net10-smoke.json" > "$out" 2>&1 || true
-        grep -o -E '"eventType":"(ReturnValueProduced|CommandSucceeded|CommandFailed)","command":\{"token":"net10-smoke"' "$out" || true
-        grep -q -E '<pre>10</pre>.*"eventType":"ReturnValueProduced"' "$out" || { echo "net10.0 build did not return 10 for Environment.Version.Major"; head -c 4000 "$out"; exit 1; }
+      run: bash ./eng/smoke-test-net10.sh "src/dotnet-interactive/bin/${{ inputs.build-config }}/net10.0/Microsoft.DotNet.Interactive.App.dll" "${RUNNER_TEMP}/net10-smoke" 300
 
     # JS tests, as the Azure Pipelines build ran them:
     # https://github.com/BenjaminMichaelis/interactive/blob/55a09aeaba91f7ba0496bcd9b627a519af66c8f5/eng/build.ps1#L53
