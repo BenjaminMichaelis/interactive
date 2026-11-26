@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation and contributors. All rights reserved.
+// Copyright (c) .NET Foundation and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
@@ -227,7 +227,7 @@ public class PackageRestoreContext : IDisposable
         string executionTfm,
         ResolvingErrorReport reportError)
     {
-        IDependencyManagerProvider iDependencyManager = _dependencyProvider.TryFindDependencyManagerByKey(Enumerable.Empty<string>(), "", reportError, "nuget");
+        IDependencyManagerProvider iDependencyManager = _dependencyProvider.TryFindDependencyManagerByKey(Enumerable.Empty<string>(), "", sdkDirOverride: null, reportError, "nuget");
 
         if (iDependencyManager is null)
         {
