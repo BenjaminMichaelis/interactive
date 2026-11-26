@@ -101,8 +101,9 @@ internal sealed class JitAsmDecompiler
                 return;
             }
 
-            // The snapshot is only valid while the DataTarget is alive.
+            // The snapshot is only valid while the DataTarget is alive; the runtime is disposed before it.
             using (dataTarget)
+            using (runtime)
             {
                 var context = new JitWriteContext(codeWriter, runtime);
 
