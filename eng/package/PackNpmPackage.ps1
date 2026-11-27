@@ -13,6 +13,9 @@ function Build-NpmPackage() {
     SetNpmVersionNumber -packageJsonContents $packageJsonContents -packageVersionNumber $packageVersionNumber
     SaveJson -packageJsonPath $packagejsonPath -packageJsonContents $packageJsonContents
 
+    # the third-party notices ship in the package (lib/ bundles its dependencies)
+    Copy-Item -Path "$PSScriptRoot\..\..\NOTICE.txt" -Destination (Join-Path (Get-Location) "NOTICE.txt") -Force
+
     # pack
     Write-Host "Packing package"
     npm pack

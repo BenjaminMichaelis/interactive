@@ -1,0 +1,203 @@
+{
+  "$comment": "Manual review for eng/generate-notices.ps1. 'packages' keys are a package name or name@version (case-insensitive). Fields: license (SPDX id or name), url, copyright (array), licenseFiles (repo-relative, replace the package's own), noticeFiles (repo-relative, added), note. The script fails when an override no longer matches a dependency, so stale entries can't pile up.",
+
+  "packages": {
+    "AsyncIO": {
+      "license": "MPL-2.0",
+      "url": "https://github.com/somdoron/AsyncIO",
+      "licenseFiles": [ "eng/notices/licenses/MPL-2.0.txt" ],
+      "note": "The package has no license metadata; the upstream repository's LICENSE.md is MPL-2.0. Distributed unmodified as AsyncIO.dll (a dependency of NetMQ). Source code: https://github.com/somdoron/AsyncIO"
+    },
+    "NaCl.Net": {
+      "note": "Distributed unmodified as NaCl.dll (a dependency of NetMQ). Source code: https://github.com/somdoron/NaCl.net"
+    },
+    "NetMQ": {
+      "license": "LGPL-3.0",
+      "url": "https://github.com/zeromq/netmq",
+      "licenseFiles": [ "eng/notices/licenses/LGPL-3.0-only.txt", "eng/notices/licenses/GPL-3.0-only.txt" ],
+      "note": "Distributed unmodified as a separate assembly (NetMQ.dll) that can be replaced with another compatible build. The license is COPYING.LESSER in the upstream repository (GNU LGPL v3, which incorporates the GNU GPL v3; both texts follow). Source code for this version: https://github.com/zeromq/netmq/tree/41a940c5893413ecda04f30af771deb4accaf251"
+    },
+
+    "Microsoft.Management.Infrastructure.Runtime.Win": {
+      "license": "Microsoft Software License Terms (Microsoft.Management.Infrastructure)",
+      "note": "Proprietary Microsoft license, included in the package as LICENSE.txt. Pulled in by Microsoft.PowerShell.SDK and bundled in the dotnet-interactive tool."
+    },
+    "Microsoft.Data.SqlClient.SNI.runtime": {
+      "license": "Microsoft Software License Terms (Microsoft.Data.SqlClient.SNI Library)",
+      "note": "Proprietary Microsoft license (Distributable Code), included in the package as LICENSE.txt. Not bundled in any package built here; it is a NuGet dependency of Microsoft.DotNet.Interactive.SqlServer and is downloaded from nuget.org."
+    },
+    "Microsoft.Azure.Kusto.Cloud.Platform": {
+      "license": "Microsoft Software License Terms (Kusto client libraries)",
+      "note": "Proprietary Microsoft license, included in the package as EULA-agreement.txt. Not bundled in any package built here; it is a NuGet dependency of Microsoft.DotNet.Interactive.Kql and is downloaded from nuget.org."
+    },
+    "Microsoft.Azure.Kusto.Cloud.Platform.Msal": {
+      "license": "Microsoft Software License Terms (Kusto client libraries)",
+      "note": "Proprietary Microsoft license, included in the package as EULA-agreement.txt. Not bundled in any package built here; it is a NuGet dependency of Microsoft.DotNet.Interactive.Kql and is downloaded from nuget.org."
+    },
+    "Microsoft.Azure.Kusto.Data": {
+      "license": "Microsoft Software License Terms (Kusto client libraries)",
+      "note": "Proprietary Microsoft license, included in the package as EULA-agreement.txt. Not bundled in any package built here; it is a NuGet dependency of Microsoft.DotNet.Interactive.Kql and is downloaded from nuget.org."
+    },
+    "Microsoft.NETCore.Platforms@1.1.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "Microsoft.NETCore.Targets@1.1.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "runtime.win-arm64.runtime.native.System.Data.SqlClient.sni": { "license": "MICROSOFT .NET LIBRARY License" },
+    "runtime.win-x64.runtime.native.System.Data.SqlClient.sni": { "license": "MICROSOFT .NET LIBRARY License" },
+    "runtime.win-x86.runtime.native.System.Data.SqlClient.sni": { "license": "MICROSOFT .NET LIBRARY License" },
+    "System.IO@4.3.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "System.Reflection@4.3.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "System.Reflection.Primitives@4.3.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "System.Runtime@4.3.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "System.Runtime.Loader@4.3.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "System.Text.Encoding@4.3.0": { "license": "MICROSOFT .NET LIBRARY License" },
+    "System.Threading.Tasks@4.3.0": { "license": "MICROSOFT .NET LIBRARY License" },
+
+    "Microsoft.AspNetCore.Html.Abstractions": {
+      "license": "Apache-2.0",
+      "url": "https://github.com/dotnet/aspnetcore",
+      "copyright": [ "Copyright (c) .NET Foundation and Contributors" ],
+      "note": "The package's license URL is https://raw.githubusercontent.com/aspnet/AspNetCore/2.0.0/LICENSE.txt (Apache License 2.0)."
+    },
+    "NETStandard.Library": {
+      "license": "MIT",
+      "url": "https://github.com/dotnet/standard"
+    },
+    "Pocket.TypeDiscovery": {
+      "license": "MIT",
+      "url": "https://github.com/jonsequitur/PocketContainer",
+      "copyright": [ "Copyright (c) Microsoft. All rights reserved." ],
+      "note": "Source-only package compiled into the assemblies built here. Its license URL no longer resolves; the license and copyright are taken from the header of the source file it contains."
+    },
+    "Microsoft.PowerShell.Archive": {
+      "license": "MIT",
+      "url": "https://github.com/PowerShell/Microsoft.PowerShell.Archive",
+      "note": "PowerShell module bundled with the PowerShell kernel. The package has no license metadata; the upstream repository is MIT."
+    },
+    "Microsoft.PowerShell.SecretManagement": {
+      "license": "MIT",
+      "url": "https://github.com/PowerShell/SecretManagement",
+      "note": "PowerShell module bundled with the PowerShell kernel."
+    },
+    "Microsoft.PowerShell.SecretStore": {
+      "license": "MIT",
+      "url": "https://github.com/PowerShell/SecretStore",
+      "note": "PowerShell module bundled with the PowerShell kernel."
+    },
+    "PackageManagement": {
+      "license": "MIT",
+      "url": "https://github.com/OneGet/oneget",
+      "note": "PowerShell module bundled with the PowerShell kernel. The package has no license metadata; the upstream repository is MIT."
+    },
+    "PowerShellGet": {
+      "license": "MIT",
+      "url": "https://github.com/PowerShell/PowerShellGet",
+      "note": "PowerShell module bundled with the PowerShell kernel. The package's license URL (https://go.microsoft.com/fwlink/?LinkId=829061) leads to the upstream repository's MIT license."
+    },
+    "ThreadJob": {
+      "license": "MIT",
+      "url": "https://github.com/PowerShell/ThreadJob",
+      "note": "PowerShell module bundled with the PowerShell kernel. The package has no license metadata; the upstream repository is MIT."
+    },
+
+    "Apache.Arrow": {
+      "license": "Apache-2.0",
+      "noticeFiles": [ "eng/notices/texts/Apache.Arrow.NOTICE.txt" ],
+      "note": "The NOTICE file is NOTICE.txt from the apache-arrow-14.0.2 tag of https://github.com/apache/arrow (it isn't in the NuGet package)."
+    },
+    "@microsoft/signalr": {
+      "copyright": [ "Copyright (c) .NET Foundation and Contributors" ],
+      "note": "The npm package has no license file; the copyright is from LICENSE.txt in https://github.com/dotnet/aspnetcore, where its source lives."
+    },
+    "@vscode/l10n": {
+      "copyright": [ "Copyright (c) Microsoft Corporation." ],
+      "note": "The npm package has no license file; the copyright is from LICENSE in https://github.com/microsoft/vscode-l10n."
+    },
+    "tr46@0.0.3": {
+      "copyright": [ "Copyright (c) Sebastian Mayr" ],
+      "note": "The npm package has no license file; the copyright is from LICENSE.md in https://github.com/jsdom/tr46."
+    },
+    "Markdig.Signed": {
+      "copyright": [ "Copyright (c) 2018-2019, Alexandre Mutel", "All rights reserved." ],
+      "note": "The package's copyright field only names the author; the notice is from license.txt at the 0.41.0 tag of https://github.com/xoofx/markdig."
+    },
+    "Mono.TextTemplating": {
+      "licenseFiles": [ "eng/notices/texts/Mono.TextTemplating.LICENSE.txt" ],
+      "note": "The license text is LICENSE from https://github.com/mono/t4."
+    },
+    "Pocket.Disposable": {
+      "copyright": [ "Copyright (c) 2017 Jon Sequeira" ],
+      "note": "Source-only package compiled into the assemblies built here. The copyright is from LICENSE in https://github.com/jonsequitur/pocketlogger."
+    },
+    "PocketLogger": {
+      "copyright": [ "Copyright (c) 2017 Jon Sequeira" ],
+      "note": "Source-only package compiled into the assemblies built here. The copyright is from LICENSE in https://github.com/jonsequitur/pocketlogger."
+    },
+    "PocketLogger.For.ApplicationInsights": {
+      "copyright": [ "Copyright (c) 2017 Jon Sequeira" ],
+      "note": "Source-only package compiled into the assemblies built here. The copyright is from LICENSE in https://github.com/jonsequitur/pocketlogger."
+    },
+    "PocketLogger.Subscribe": {
+      "copyright": [ "Copyright (c) 2017 Jon Sequeira" ],
+      "note": "Source-only package compiled into the assemblies built here. The copyright is from LICENSE in https://github.com/jonsequitur/pocketlogger."
+    },
+    "Serilog.Sinks.RollingFileAlternate": {
+      "license": "Apache-2.0",
+      "copyright": [ "Copyright Serilog Contributors 2014" ],
+      "note": "The upstream repository (https://github.com/bedegaming/sinks-rollingfile) is no longer available; the license is from the package's license URL and the copyright from the previous notices file."
+    },
+    "SQLitePCLRaw.bundle_e_sqlite3": {
+      "noticeFiles": [ "eng/notices/texts/SQLitePCLRaw.NOTICE.txt" ],
+      "note": "The NOTICE file is NOTICE.TXT from the v3.0.5 tag of https://github.com/ericsink/SQLitePCL.raw (it isn't in the NuGet package)."
+    },
+    "SQLitePCLRaw.config.e_sqlite3": {
+      "noticeFiles": [ "eng/notices/texts/SQLitePCLRaw.NOTICE.txt" ],
+      "note": "The NOTICE file is NOTICE.TXT from the v3.0.5 tag of https://github.com/ericsink/SQLitePCL.raw (it isn't in the NuGet package)."
+    },
+    "SQLitePCLRaw.core": {
+      "noticeFiles": [ "eng/notices/texts/SQLitePCLRaw.NOTICE.txt" ],
+      "note": "The NOTICE file is NOTICE.TXT from the v3.0.5 tag of https://github.com/ericsink/SQLitePCL.raw (it isn't in the NuGet package)."
+    },
+    "SQLitePCLRaw.provider.e_sqlite3": {
+      "noticeFiles": [ "eng/notices/texts/SQLitePCLRaw.NOTICE.txt" ],
+      "note": "The NOTICE file is NOTICE.TXT from the v3.0.5 tag of https://github.com/ericsink/SQLitePCL.raw (it isn't in the NuGet package)."
+    },
+    "SQLite": {
+      "license": "blessing",
+      "url": "https://sqlite.org/copyright.html",
+      "note": "SQLite is in the public domain."
+    },
+    "Npgsql": {
+      "licenseFiles": [ "eng/notices/texts/Npgsql.LICENSE.txt" ],
+      "note": "The license text is LICENSE from the v9.0.3 tag of https://github.com/npgsql/npgsql."
+    }
+  },
+
+  "exclude": {
+  },
+
+  "additionalComponents": [
+    {
+      "name": "FsAutoComplete",
+      "version": "(vendored source)",
+      "license": "Apache-2.0",
+      "url": "https://github.com/ionide/FsAutoComplete",
+      "licenseFiles": [ "src/Microsoft.DotNet.Interactive.FSharp/FsAutoComplete/LICENSE.md" ],
+      "note": "Source files in src/Microsoft.DotNet.Interactive.FSharp/FsAutoComplete were copied from FsAutoComplete and have been modified for .NET Interactive (for example, to follow FSharp.Compiler.Service API changes)."
+    },
+    {
+      "name": "nteract",
+      "version": "(design reference)",
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/nteract/nteract",
+      "licenseFiles": [ "eng/notices/texts/nteract.LICENSE.txt" ],
+      "note": "Some parts of Jupyter messaging protocol handling and Jupyter kernel creation in Microsoft.DotNet.Interactive.Jupyter are inspired by the nteract project."
+    },
+    {
+      "name": "SharpLab",
+      "version": "(vendored source)",
+      "license": "BSD-2-Clause",
+      "url": "https://github.com/ashmind/SharpLab",
+      "licenseFiles": [ "src/Microsoft.DotNet.Interactive.ExtensionLab/Inspector/LICENSE.SharpLab" ],
+      "note": "Parts of src/Microsoft.DotNet.Interactive.ExtensionLab/Inspector are derived from SharpLab."
+    }
+  ]
+}
