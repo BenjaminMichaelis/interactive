@@ -67,6 +67,20 @@ jobs:
     permissions:
       contents: read
       checks: write   # required by dorny/test-reporter (inside composite action)
+    # SQL Server for the [MsSqlFact] tests in Microsoft.DotNet.Interactive.SqlServer.Tests.
+    # Service containers only run on Linux runners; an empty image skips the service on Windows.
+    services:
+      mssql:
+        image: ${{ matrix.runner == 'ubuntu-latest' && 'mcr.microsoft.com/mssql/server:2022-latest' || '' }}
+        env:
+          ACCEPT_EULA: 'Y'
+          # Keep in sync with the job-level MSSQL_SA_PASSWORD below (services can't read the env context).
+          MSSQL_SA_PASSWORD: PolyglotCi2026Pass
+        ports:
+          - 1433:1433
+    env:
+      # Throwaway password for the CI-only SQL Server container above; not a secret.
+      MSSQL_SA_PASSWORD: PolyglotCi2026Pass
     steps:
       # core.symlinks must be configured before checkout so git materialises
       # symlinks as real reparse points on Windows.  ensure-symlinks.ps1 also
@@ -80,7 +94,81 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
 
+      - name: Restore AdventureWorks into SQL Server (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          MSSQL_CONTAINER: ${{ job.services.mssql.id }}
+          ADVENTUREWORKS_BAK_URL: https://github.com/Microsoft/sql-server-samples/releases/download/adventureworks/AdventureWorks2022.bak
+        run: |
+          set -euo pipefail
+          sqlcmd() {
+            docker exec "$MSSQL_CONTAINER" /opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P "$MSSQL_SA_PASSWORD" "$@"
+          }
+
+          echo "Waiting for SQL Server to accept connections..."
+          for i in $(seq 1 60); do
+            if sqlcmd -Q "SELECT 1" > /dev/null 2>&1; then echo "SQL Server is up."; break; fi
+            if [[ $i -eq 60 ]]; then echo "SQL Server did not start in time" >&2; docker logs "$MSSQL_CONTAINER" >&2; exit 1; fi
+            sleep 2
+          done
+
+          curl -fsSL --retry 5 -o "$RUNNER_TEMP/AdventureWorks2022.bak" "$ADVENTUREWORKS_BAK_URL"
+          docker exec -u 0 "$MSSQL_CONTAINER" mkdir -p /var/opt/mssql/backup
+          docker cp "$RUNNER_TEMP/AdventureWorks2022.bak" "$MSSQL_CONTAINER:/var/opt/mssql/backup/AdventureWorks2022.bak"
+          docker exec -u 0 "$MSSQL_CONTAINER" chown -R mssql /var/opt/mssql/backup
+
+          sqlcmd -Q "RESTORE DATABASE AdventureWorks2022 FROM DISK = '/var/opt/mssql/backup/AdventureWorks2022.bak' WITH MOVE 'AdventureWorks2022' TO '/var/opt/mssql/data/AdventureWorks2022.mdf', MOVE 'AdventureWorks2022_log' TO '/var/opt/mssql/data/AdventureWorks2022_log.ldf', REPLACE"
+          sqlcmd -d AdventureWorks2022 -Q "SELECT COUNT(*) AS AddressTypes FROM Person.AddressType"
+
+          echo "TEST_MSSQL_CONNECTION_STRING=Server=localhost,1433;Database=AdventureWorks2022;User ID=sa;Password=$MSSQL_SA_PASSWORD;Encrypt=False;TrustServerCertificate=True" >> "$GITHUB_ENV"
+
+      # The SQL kernel runs the SQL Tools Service, a net8.0 framework-dependent global tool.
+      # Install the .NET 8 runtime alongside the repo's SDK (set up later by build-and-test).
+      - name: Setup .NET 8 runtime for SQL Tools Service (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 #v6
+        with:
+          dotnet-version: 8.0.x
+
+      # MsSqlKernelExtension installs this tool on first use with `dotnet tool install --global`, but
+      # run from the repo that picks up NuGet.config, whose dnceng feeds don't carry the tool. Install
+      # it from nuget.org up front (outside the repo) so the kernel finds it already present.
+      - name: Install SQL Tools Service global tool (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          dotnet tool install --global Microsoft.SqlServer.SqlToolsServiceLayer.Tool --version 2.0.0 \
+            --add-source https://api.nuget.org/v3/index.json
+          dotnet tool list --global
+
       - uses: ./.github/actions/build-and-test
+
+      # The [MsSqlFact] tests skip silently when they can't connect, so fail the job
+      # if any SQL Server test was skipped instead of run on the Linux leg.
+      - name: Verify SQL Server tests ran (Linux)
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        shell: pwsh
+        run: |
+          $trxFiles = Get-ChildItem artifacts/TestResults/Release -Recurse -Filter *.trx |
+                      Where-Object { Select-String -Path $_.FullName -SimpleMatch 'Microsoft.DotNet.Interactive.SqlServer.Tests' -Quiet }
+          if (-not $trxFiles) { Write-Error 'No test results found for Microsoft.DotNet.Interactive.SqlServer.Tests'; exit 1 }
+          # Retries can leave several result files; judge the most recent run.
+          $trx = $trxFiles | Sort-Object LastWriteTimeUtc | Select-Object -Last 1
+          [xml]$doc = Get-Content $trx.FullName
+          $results = @($doc.TestRun.Results.UnitTestResult)
+          $results | Group-Object outcome | ForEach-Object { Write-Host "$($_.Name): $($_.Count)" }
+          $skipped = @($results | Where-Object outcome -eq 'NotExecuted')
+          if ($skipped) {
+            $skipped | ForEach-Object { Write-Host "Skipped: $($_.testName)" }
+            Write-Error "$($skipped.Count) SQL Server test(s) were skipped; is TEST_MSSQL_CONNECTION_STRING reaching a running SQL Server?"
+            exit 1
+          }
+          if (-not ($results | Where-Object { $_.testName -like '*It_can_scaffold_a_DbContext_in_a_CSharpKernel*' -and $_.outcome -eq 'Passed' })) {
+            Write-Error 'The EF Core DbContext scaffolding test did not pass.'
+            exit 1
+          }
 
       - name: Extract package version (Windows)
         if: runner.os == 'Windows'

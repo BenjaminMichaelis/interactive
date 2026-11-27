@@ -430,7 +430,7 @@ my_data_result");
     [InlineData("string testVar = \"«ταБЬℓσ»\";", "«ταБЬℓσ»")] // unicode
     [InlineData("string testVar = \"\";", "")] // Empty string
     [InlineData("double testVar = 123456.789;", 123456.789)] // double
-    [InlineData("decimal testVar = 123456.789M;", 123456.789, typeof(Decimal))] // decimal
+    [InlineData("decimal testVar = 123456.789M;", "123456.789", typeof(Decimal))] // decimal
     [InlineData("bool testVar = false;", false)] // bool
     [InlineData("char testVar = 'a';", "a")] // char
     [InlineData("char testVar = '\\'';", "'")] // ' char
@@ -462,8 +462,9 @@ select @testVar";
 
         if (changeType != null)
         {
-            // Decimals can't be made constants so need to convert at runtime
-            expectedValue = Convert.ChangeType(expectedValue, changeType);
+            // Decimals can't be made constants so need to convert at runtime. Parse from a string:
+            // converting from a double literal is inexact (e.g. 123456.78900000000430736690760M on .NET 11).
+            expectedValue = Convert.ChangeType(expectedValue, changeType, System.Globalization.CultureInfo.InvariantCulture);
         }
         data.Data
             .Should()
