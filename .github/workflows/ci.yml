@@ -82,6 +82,14 @@ jobs:
 
       - uses: ./.github/actions/build-and-test
 
+      # NOTICE.txt ships in every package; fail when a dependency change means it needs regenerating.
+      - name: Check third-party notices are up to date (Windows)
+        if: ${{ !cancelled() && runner.os == 'Windows' }}
+        shell: pwsh
+        run: ./eng/generate-notices.ps1 -Check
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}\.packages
+
       - name: Extract package version (Windows)
         if: runner.os == 'Windows'
         id: version
