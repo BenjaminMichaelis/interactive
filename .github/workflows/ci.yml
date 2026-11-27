@@ -123,6 +123,26 @@ jobs:
 
           echo "TEST_MSSQL_CONNECTION_STRING=Server=localhost,1433;Database=AdventureWorks2022;User ID=sa;Password=$MSSQL_SA_PASSWORD;Encrypt=False;TrustServerCertificate=True" >> "$GITHUB_ENV"
 
+      # The SQL kernel runs the SQL Tools Service, a net8.0 framework-dependent global tool.
+      # Install the .NET 8 runtime alongside the repo's SDK (set up later by build-and-test).
+      - name: Setup .NET 8 runtime for SQL Tools Service (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 #v6
+        with:
+          dotnet-version: 8.0.x
+
+      # MsSqlKernelExtension installs this tool on first use with `dotnet tool install --global`, but
+      # run from the repo that picks up NuGet.config, whose dnceng feeds don't carry the tool. Install
+      # it from nuget.org up front (outside the repo) so the kernel finds it already present.
+      - name: Install SQL Tools Service global tool (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          dotnet tool install --global Microsoft.SqlServer.SqlToolsServiceLayer.Tool --version 2.0.0 \
+            --add-source https://api.nuget.org/v3/index.json
+          dotnet tool list --global
+
       - uses: ./.github/actions/build-and-test
 
       # The [MsSqlFact] tests skip silently when they can't connect, so fail the job
