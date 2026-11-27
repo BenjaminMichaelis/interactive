@@ -394,3 +394,8 @@ src/Microsoft.DotNet.Interactive.Js/dist/
 src/Microsoft.DotNet.Interactive.ExtensionLab.Tests/DataFrameKernelExtensionTests.it_registers_formatters.received.json
 
 src/microsoft-dotnet-interactive/lib/
+
+# copied in from the repository root by eng/package/Pack*.ps1
+src/polyglot-notebooks/NOTICE.txt
+src/polyglot-notebooks-vscode/NOTICE.txt
+src/polyglot-notebooks-vscode-insiders/NOTICE.txt

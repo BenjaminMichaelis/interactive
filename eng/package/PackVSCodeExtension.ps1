@@ -33,6 +33,9 @@ function Build-VsCodeExtension([string] $packageDirectory, [string] $outputSubDi
         $additionalArgs = "--pre-release"
     }   
 
+    # the third-party notices ship in the .vsix next to the license
+    Copy-Item -Path "$PSScriptRoot\..\..\NOTICE.txt" -Destination (Join-Path (Get-Location) "NOTICE.txt") -Force
+
     # pack
     Write-Host "Packing extension"
     npx @vscode/vsce package $additionalArgs -o "$outDir\$outputSubDirectory\dotnet-interactive-vscode-$packageVersionNumber.vsix"

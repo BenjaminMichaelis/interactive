@@ -80,6 +80,16 @@ PowerShell for .NET Core is required. This will uninstall any previous version o
 
 If you prefer a development environment that's more consistent with the out-of-the-box .NET experience, you can set the environment variable `DisableArcade` to `1`.
 
+### Third-party notices
+
+`NOTICE.txt` lists the third-party components in everything we ship (the NuGet packages, the VS Code extensions and the npm package) and is copied into each of them. It is generated, so after adding, removing or updating a NuGet or npm dependency, regenerate it:
+
+```console
+> pwsh eng/generate-notices.ps1
+```
+
+CI runs the same script with `-Check` and fails if `NOTICE.txt` is out of date. If the script reports a component it can't attribute (no license, license text or copyright found), look at the package's actual license and record what you find in `eng/notices/overrides.json`.
+
 ## Building the Polyglot Notebooks extension for Visual Studio Code
 
 In order to build the Polyglot Notebooks extension for Visual Studio Code, please follow the instructions below. Note that it's not necessary to use a local build of `dotnet-interactive` in order to work on the Visual Studio Code extension.
